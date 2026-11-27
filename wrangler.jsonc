@@ -1,0 +1,29 @@
+{
+  // Konfigurasi Cloudflare Worker untuk Lelang Kebaikan Cigatas.
+  // Nama worker harus sama dengan yang sudah dibuat: lelang.appwnr.workers.dev
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "lelang",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference: nama service harus sama dengan nama worker di atas.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "lelang"
+    }
+  ],
+  // Aplikasi sepenuhnya force-dynamic + cache dummy (lihat open-next.config.ts),
+  // jadi TIDAK butuh bucket R2. Binding IMAGES juga sengaja tidak dipakai:
+  // foto sudah dikompres ke WebP saat upload dan next/image memakai unoptimized.
+  "observability": {
+    "enabled": true
+  }
+  // Environment variables produksi (PANITIA_PASSWORD, SESSION_SECRET,
+  // SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) diatur di dashboard Cloudflare
+  // atau via `wrangler secret put` — JANGAN ditulis di file ini.
+}

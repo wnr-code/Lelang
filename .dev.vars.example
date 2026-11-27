@@ -1,0 +1,11 @@
+# Salin ke .dev.vars untuk `npm run preview` (wrangler dev lokal).
+# .dev.vars di-ignore git. Untuk produksi, set di dashboard Cloudflare / wrangler secret.
+NEXTJS_ENV=development
+
+# Kata sandi panitia & rahasia sesi (ganti dengan nilai kuat!)
+PANITIA_PASSWORD=cigatas-berbagi
+SESSION_SECRET=ganti-dengan-string-acak-panjang
+
+# Supabase (produksi). Kosongkan bila ingin preview memakai SQLite lokal.
+SUPABASE_URL=https://jxpjleqzpzrjbdrxxjgv.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
