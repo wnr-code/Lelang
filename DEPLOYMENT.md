@@ -89,6 +89,8 @@ Cocok bila ingin setiap `git push` otomatis deploy.
    - **Build command:** `npx opennextjs-cloudflare build`
    - **Deploy command:** `npx wrangler deploy`
    - **Root directory:** `/` (root repo)
+   - **Node version:** `22` (repo menyertakan `.nvmrc` = 22; bila build image tidak membacanya,
+     set variabel build `NODE_VERSION=22`). Aplikasi diuji di Node 22.
 4. Tambahkan **environment variables** (lihat §5) di settings Builds/Variables.
 5. Simpan → trigger build pertama. Setiap push ke branch akan build + deploy otomatis.
 
