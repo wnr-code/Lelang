@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
-import { PublicHeader, PublicFooter } from "@/components/ui";
+import { PublicFooter } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 import { MemberSettings } from "@/components/member-settings";
 
 export const dynamic = "force-dynamic";

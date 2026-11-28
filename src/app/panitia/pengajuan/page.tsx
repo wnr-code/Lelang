@@ -33,7 +33,7 @@ export default async function PengajuanPage({ searchParams }: { searchParams: Pr
         <p className="mt-0.5 text-sm text-stone-500">
           Verifikasi bantuan barang & tenaga. {pendingCount > 0 ? `${pendingCount} pengajuan menunggu konfirmasi.` : "Tidak ada yang menunggu."}
         </p>
-        <p className="mt-1 text-[11px] text-stone-400">
+        <p className="mt-1 text-[12px] text-stone-400">
           Pengajuan anggota tidak otomatis dihitung sebagai kontribusi diterima — panitia wajib memverifikasi.
         </p>
       </div>

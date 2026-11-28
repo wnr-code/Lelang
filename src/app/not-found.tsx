@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HeartCrack, ArrowLeft } from "lucide-react";
-import { PublicHeader, PublicFooter } from "@/components/ui";
+import { PublicFooter } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 
 export default function NotFound() {
   return (

@@ -113,7 +113,7 @@ export function SurplusSection({ eventId, items, surplus }: { eventId: number; i
           <button type="submit" disabled={pending} className="btn-primary col-span-2 py-2.5 text-xs">
             {pending ? "Menyimpan..." : "Simpan Catatan"}
           </button>
-          <p className="col-span-2 text-center text-[11px] text-stone-400">Riwayat tersimpan permanen di arsip kegiatan.</p>
+          <p className="col-span-2 text-center text-[12px] text-stone-400">Riwayat tersimpan permanen di arsip kegiatan.</p>
         </form>
       )}
 
@@ -251,7 +251,7 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
         <button type="submit" disabled={pending} className="btn-primary w-full py-2.5 text-xs">
           <Upload className="h-3.5 w-3.5" /> {pending ? "Mengompres & mengupload..." : "Upload Foto"}
         </button>
-        <p className="text-center text-[11px] text-stone-400">Maks 2 MB — foto dikompres otomatis di HP & server (WebP) agar hemat kuota warga.</p>
+        <p className="text-center text-[12px] text-stone-400">Maks 2 MB — foto dikompres otomatis di HP & server (WebP) agar hemat kuota warga.</p>
       </form>
 
       {photos.length > 0 && (
@@ -259,7 +259,7 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
           {photos.map((p) => (
             <figure key={p.id} className="card group relative overflow-hidden">
               <Image src={p.file_path} alt={p.caption || "Foto kegiatan"} width={400} height={300} className="aspect-[4/3] w-full object-cover" />
-              {p.caption && <figcaption className="px-2.5 py-1.5 text-[10px] leading-snug text-stone-500">{p.caption}</figcaption>}
+              {p.caption && <figcaption className="px-2.5 py-1.5 text-[11px] leading-snug text-stone-500">{p.caption}</figcaption>}
               <button
                 onClick={() => { if (confirm("Hapus foto ini?")) run(() => deletePhotoAction(p.id)); }}
                 className="absolute right-1.5 top-1.5 rounded-lg bg-white/90 p-1.5 text-rose-500 opacity-0 shadow transition group-hover:opacity-100"

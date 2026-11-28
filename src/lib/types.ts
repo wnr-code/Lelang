@@ -1,6 +1,7 @@
 export type EventStatus = "draft" | "active" | "completed" | "archived";
 export type SubmissionStatus = "pending" | "approved" | "needs_confirmation" | "rejected" | "done";
 export type ItemKind = "barang" | "tenaga";
+export type ItemCategory = "sembako" | "barang" | "tenaga" | "lainnya";
 export type ItemStatus = "open" | "process" | "fulfilled";
 export type SurplusCondition = "sisa" | "berlebih";
 export type SurplusDecision =
@@ -18,6 +19,7 @@ export interface EventRow {
   title: string;
   description: string;
   event_date: string | null;
+  event_time: string | null;
   location: string;
   status: EventStatus;
   cover_image: string | null;
@@ -29,6 +31,7 @@ export interface ItemRow {
   id: number;
   event_id: number;
   kind: ItemKind;
+  category: ItemCategory;
   name: string;
   target_qty: number | null;
   target_label: string;
@@ -128,6 +131,26 @@ export const ITEM_KIND_LABEL: Record<ItemKind, string> = {
   barang: "Barang / Sembako",
   tenaga: "Bantuan Tenaga",
 };
+
+/** Kategori kebutuhan — dipakai sebagai tab di halaman kegiatan. */
+export const ITEM_CATEGORY_LABEL: Record<ItemCategory, string> = {
+  sembako: "Sembako",
+  barang: "Barang",
+  tenaga: "Bantuan Tenaga",
+  lainnya: "Lainnya",
+};
+
+export const ITEM_CATEGORY_ORDER: ItemCategory[] = ["sembako", "barang", "tenaga", "lainnya"];
+
+/** Contoh bantuan tenaga untuk panduan panitia & anggota. */
+export const TENAGA_EXAMPLES = [
+  "Juru Parkir",
+  "Tenaga Masak (Dapur Umum)",
+  "Tenaga Bongkar & Angkut",
+  "Tenaga Kebersihan",
+  "Penerima Tamu",
+  "Tenaga Dokumentasi",
+];
 
 export const SURPLUS_DECISION_LABEL: Record<SurplusDecision, string> = {
   disimpan: "Disimpan",

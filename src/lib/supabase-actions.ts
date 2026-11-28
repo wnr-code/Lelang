@@ -71,6 +71,7 @@ export async function sbCreateEvent(p: {
   description: string;
   eventDate: string;
   location: string;
+  eventTime: string | null;
 }): Promise<Res> {
   const sb = getSupabase();
   let slug = slugify(p.title);
@@ -88,6 +89,7 @@ export async function sbCreateEvent(p: {
       description: p.description,
       event_date: p.eventDate || null,
       location: p.location,
+      event_time: p.eventTime,
       status: "draft",
     })
     .select("id")
@@ -102,10 +104,11 @@ export async function sbUpdateEvent(p: {
   description: string;
   eventDate: string;
   location: string;
+  eventTime: string | null;
 }): Promise<Res> {
   const { error } = await getSupabase()
     .from(TABLES.events)
-    .update({ title: p.title, description: p.description, event_date: p.eventDate || null, location: p.location })
+    .update({ title: p.title, description: p.description, event_date: p.eventDate || null, location: p.location, event_time: p.eventTime })
     .eq("id", p.id);
   throwIfError(error, "updateEvent");
   return ok("Kegiatan diperbarui.");
@@ -142,6 +145,7 @@ export async function sbAddItem(p: {
   unit: string;
   note: string;
   kind: "barang" | "tenaga";
+  category: "sembako" | "barang" | "tenaga" | "lainnya";
 }): Promise<Res> {
   const sb = getSupabase();
   const { data: maxRow, error: maxErr } = await sb
@@ -162,6 +166,7 @@ export async function sbAddItem(p: {
     note: p.note,
     sort_order: nextSort,
     kind: p.kind,
+    category: p.category,
   });
   throwIfError(error, "addItem");
   return ok(p.kind === "tenaga" ? "Kebutuhan tenaga ditambahkan." : "Item kebutuhan ditambahkan.");
@@ -175,10 +180,11 @@ export async function sbUpdateItem(p: {
   unit: string;
   note: string;
   kind: "barang" | "tenaga";
+  category: "sembako" | "barang" | "tenaga" | "lainnya";
 }): Promise<Res> {
   const { error } = await getSupabase()
     .from(TABLES.items)
-    .update({ name: p.name, target_qty: p.targetQty, target_label: p.targetLabel, unit: p.unit, note: p.note, kind: p.kind })
+    .update({ name: p.name, target_qty: p.targetQty, target_label: p.targetLabel, unit: p.unit, note: p.note, kind: p.kind, category: p.category })
     .eq("id", p.id);
   throwIfError(error, "updateItem");
   return ok("Item diperbarui.");

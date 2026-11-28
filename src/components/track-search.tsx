@@ -1,0 +1,48 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Ticket } from "lucide-react";
+
+/** Form lacak kode pengajuan (CGT-xxxxxx). */
+export function TrackSearch() {
+  const [code, setCode] = useState("");
+  const router = useRouter();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const c = code.trim().toUpperCase();
+    if (c) router.push(`/lacak/${encodeURIComponent(c)}`);
+  }
+
+  return (
+    <section className="card mt-3 px-5 py-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+          <Ticket className="h-5 w-5" />
+        </span>
+        <div>
+          <h1 className="text-lg font-extrabold text-ink">Lacak Pengajuan</h1>
+          <p className="text-xs text-stone-400">Masukkan kode lacak yang kamu terima saat mengajukan bantuan.</p>
+        </div>
+      </div>
+      <form onSubmit={handleSubmit} className="mt-5 flex gap-2">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="mis. CGT-ABC123"
+          className="input flex-1 font-mono uppercase tracking-widest"
+          maxLength={20}
+          required
+        />
+        <button type="submit" className="btn-primary shrink-0">
+          <Search className="h-4 w-4" /> Lacak
+        </button>
+      </form>
+      <p className="mt-3 text-[12px] leading-relaxed text-stone-400">
+        Kode lacak bersifat pribadi — hanya kamu dan panitia yang bisa melihat detail pengajuanmu.
+        Tanpa akun, tanpa login.
+      </p>
+    </section>
+  );
+}

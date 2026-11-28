@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin, UserCheck, Recycle, Camera, PackageCheck, Heart } from "lucide-react";
-import { PublicHeader, PublicFooter, formatDate, EmptyState } from "@/components/ui";
+import { PublicFooter, formatDate, EmptyState } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 import { getEventBySlug, getItemsWithStatus, getSurplus, getPhotos } from "@/lib/queries";
 import { SURPLUS_DECISION_LABEL, SURPLUS_CONDITION_LABEL } from "@/lib/types";
 
@@ -27,7 +28,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
 
         <section className="card mt-3 overflow-hidden">
           <div className="bg-stone-800 px-5 py-5 text-white">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-stone-300">Arsip Kegiatan</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-300">Arsip Kegiatan</p>
             <h1 className="mt-1 text-2xl font-extrabold">{event.title}</h1>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-300">
               <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{formatDate(event.event_date)}</span>
@@ -113,7 +114,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
               {photos.map((p) => (
                 <figure key={p.id} className="card overflow-hidden">
                   <Image src={p.file_path} alt={p.caption || "Dokumentasi kegiatan"} width={600} height={400} className="aspect-[4/3] w-full object-cover" />
-                  {p.caption && <figcaption className="px-3 py-2 text-[11px] leading-snug text-stone-500">{p.caption}</figcaption>}
+                  {p.caption && <figcaption className="px-3 py-2 text-[12px] leading-snug text-stone-500">{p.caption}</figcaption>}
                 </figure>
               ))}
             </div>

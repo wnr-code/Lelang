@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Search, Clock3, CheckCircle2, XCircle, UserCheck, CalendarDays, HelpCircle } from "lucide-react";
-import { PublicHeader, PublicFooter, SubmissionStatusChip, formatDate } from "@/components/ui";
+import { PublicFooter, SubmissionStatusChip, formatDate } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 import { getSubmissionByCode } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function TrackPage({ params }: { params: Promise<{ code: st
         </Link>
 
         <section className="card mt-3 px-5 py-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Status Pengajuan Bantuan</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">Status Pengajuan Bantuan</p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <code className="rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-extrabold tracking-widest text-stone-700">{sub.track_code}</code>
             <SubmissionStatusChip status={sub.status} />

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Archive, ArrowLeft, CalendarDays, PackageCheck, Recycle, Camera } from "lucide-react";
-import { PublicHeader, PublicFooter, formatDate, EmptyState } from "@/components/ui";
+import { PublicFooter, formatDate, EmptyState } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 import { getArchivedEvents, getItemsWithStatus, getSurplus, getPhotos } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ export default async function ArchivePage() {
                     <span className="chip shrink-0 bg-stone-100 text-stone-600">Selesai</span>
                   </div>
                   <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-stone-500">{ev.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-stone-500">
+                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] font-bold text-stone-500">
                     <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700">
                       <PackageCheck className="h-3.5 w-3.5" /> {fulfilled}/{items.length} terpenuhi
                     </span>

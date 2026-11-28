@@ -38,6 +38,7 @@ export function mapEvent(r: Raw): EventRow {
     title: String(r.title),
     description: String(r.description ?? ""),
     event_date: normDate(r.event_date),
+    event_time: r.event_time == null || r.event_time === "" ? null : String(r.event_time).slice(0, 5),
     location: String(r.location ?? ""),
     status: r.status as EventRow["status"],
     cover_image: r.cover_image == null ? null : String(r.cover_image),
@@ -51,6 +52,9 @@ export function mapItem(r: Raw): ItemRow {
     id: Number(r.id),
     event_id: Number(r.event_id),
     kind: r.kind === "tenaga" ? "tenaga" : "barang",
+    category: (["sembako", "barang", "tenaga", "lainnya"].includes(String(r.category))
+      ? String(r.category)
+      : r.kind === "tenaga" ? "tenaga" : "barang") as ItemRow["category"],
     name: String(r.name),
     target_qty: r.target_qty == null ? null : Number(r.target_qty),
     target_label: String(r.target_label ?? ""),

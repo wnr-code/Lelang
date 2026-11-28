@@ -10,6 +10,7 @@ create table if not exists public.events (
   title text not null,
   description text not null default '',
   event_date date,
+  event_time text,
   location text not null default '',
   status text not null default 'draft' check (status in ('draft','active','completed','archived')),
   cover_image text,
@@ -21,6 +22,7 @@ create table if not exists public.items (
   id bigint generated always as identity primary key,
   event_id bigint not null references public.events(id) on delete cascade,
   kind text not null default 'barang' check (kind in ('barang','tenaga')),
+  category text not null default 'barang' check (category in ('sembako','barang','tenaga','lainnya')),
   name text not null,
   target_qty double precision,
   target_label text not null,
@@ -122,3 +124,41 @@ create policy "public read surplus" on public.surplus for select using (true);
 
 -- submissions & fulfillments memuat data pribadi (kontak) → hanya service-role.
 -- (Tidak ada policy select untuk anon; service-role melewati RLS.)
+
+-- ------------------------------------------------------------
+-- Fase 3: push notification, RSVP Hadir/Tidak, pengingat, pengaturan.
+-- Hanya service-role (server) yang boleh akses; RLS aktif tanpa policy anon.
+-- ------------------------------------------------------------
+create table if not exists public.push_subscriptions (
+  id bigint generated always as identity primary key,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  nickname text not null default '',
+  created_at timestamptz not null default now(),
+  last_seen timestamptz not null default now()
+);
+create table if not exists public.event_rsvps (
+  id bigint generated always as identity primary key,
+  event_id bigint not null references public.events(id) on delete cascade,
+  endpoint text not null default '',
+  nickname text not null default '',
+  answer text not null check (answer in ('hadir','tidak')),
+  created_at timestamptz not null default now(),
+  unique (event_id, endpoint)
+);
+create table if not exists public.push_reminders (
+  id bigint generated always as identity primary key,
+  event_id bigint not null references public.events(id) on delete cascade,
+  endpoint text not null,
+  sent_at timestamptz not null default now(),
+  unique (event_id, endpoint)
+);
+create table if not exists public.app_settings (
+  key text primary key,
+  value text not null
+);
+alter table public.push_subscriptions enable row level security;
+alter table public.event_rsvps enable row level security;
+alter table public.push_reminders enable row level security;
+alter table public.app_settings enable row level security;

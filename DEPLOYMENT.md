@@ -210,3 +210,39 @@ fungsi yang diminta. Ukuran ini normal untuk aplikasi Next.js + OpenNext dengan 
 - **Tinggal Anda lakukan:** deploy via Jalur A (`wrangler login` + `npm run deploy`) atau Jalur B
   (Workers Builds), isi 4 env vars, pastikan domain `lelang.cgs.my.id` aktif. Perhatikan §6 (paket
   Workers Paid untuk ukuran bundle ini).
+## 10. Fase 3 — Kategori, jam acara, countdown & notifikasi Android
+
+**Kategori kebutuhan (tab).** `items.category` ∈ `sembako | barang | tenaga | lainnya`.
+Halaman `/kegiatan/[slug]` menampilkan tab **Sembako · Barang · Bantuan Tenaga · Lainnya**
+(bukan daftar panjang). Panitia memilih kategori saat menambah/mengedit item; `kind`
+(barang/tenaga) mengikuti kategori. Contoh tenaga: Juru Parkir, Tenaga Masak, Bongkar &
+Angkut, Kebersihan, Penerima Tamu, Dokumentasi.
+
+**Jam acara & countdown.** `events.event_time` (format `HH:MM`, WIB). Halaman acara &
+beranda menampilkan hitung waktu berjalan (hari/jam/menit/detik) menuju acara. Contoh:
+Liko Akbar 23 Des 2026 mulai **19:00** → pengingat otomatis **15:00** (4 jam sebelumnya).
+
+**Notifikasi push Android (Hadir / Tidak).**
+- Service worker `public/sw.js` menampilkan notifikasi sistem dengan aksi **✅ Hadir / 🙏 Tidak**.
+- Anggota mengaktifkan lewat kartu "Pengingat Acara" di halaman acara / `/notifikasi`
+  (izin notifikasi + langganan Web Push). Tombol **Coba Notifikasi** mengirim uji.
+- Enkripsi payload RFC 8291 (aes128gcm) + VAPID RFC 8292 memakai WebCrypto & fetch
+  (`src/lib/webpush.ts`) — jalan di Node maupun Cloudflare Worker, tanpa node:crypto.
+- Kunci VAPID disimpan di `app_settings` (dibuat sekali otomatis). Bisa dioverride lewat
+  env `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (JWK JSON) + `VAPID_SUBJECT`.
+- RSVP tersimpan di `event_rsvps`; panitia melihat rekap Hadir/Tidak di `/panitia/notifikasi`.
+
+**Penjadwal pengingat (produksi).** `pg_cron` + `pg_net` di Supabase memanggil
+`POST https://lelang.cgs.my.id/api/cron/reminders` tiap **15 menit** dengan header
+`x-cron-key` = `app_settings.cron_secret`. Route memvalidasi kunci (atau cookie panitia),
+lalu mengirim pengingat untuk acara yang masuk jendela `[mulai − 4 jam, mulai)`.
+Idempoten lewat tabel `push_reminders` (tidak kirim ganda). Panitia juga bisa memicu
+manual lewat tombol **Kirim Pengingat Sekarang** di `/panitia/notifikasi`.
+
+> Catatan: cron berjalan di sisi Supabase, jadi tidak perlu mengubah build command
+> Workers Builds maupun menambah `scheduled` handler di Worker. Selama route
+> `/api/cron/reminders` sudah ter-deploy, pengingat aktif otomatis.
+
+**Ukuran teks.** Dasar font dinaikkan 16→17px dan literal teks kecil +1px agar lebih
+terbaca di HP Android. Judul "Lelang Kebaikan" memakai grafis ketuk palu
+(`public/images/gavel.webp`).

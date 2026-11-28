@@ -23,7 +23,7 @@ export default function LoginPage() {
           />
           <h1 className="mt-4 text-xl font-extrabold text-ink">Masuk Panitia</h1>
           <p className="mt-1 text-xs text-stone-500">Lelang Kebaikan Cigatas · Korwil Cigatas</p>
-          <p className="text-[11px] italic text-emerald-700">Bersama dalam Kebaikan</p>
+          <p className="text-[12px] italic text-emerald-700">Bersama dalam Kebaikan</p>
         </div>
 
         <form action={formAction} className="card mt-6 space-y-4 px-5 py-6">
@@ -48,7 +48,7 @@ export default function LoginPage() {
           <button type="submit" disabled={pending} className="btn-primary w-full">
             {pending ? "Memeriksa..." : "Masuk"}
           </button>
-          <p className="text-center text-[11px] leading-relaxed text-stone-400">
+          <p className="text-center text-[12px] leading-relaxed text-stone-400">
             Hanya panitia yang memiliki kata sandi. Anggota tidak perlu login untuk membantu.
           </p>
         </form>

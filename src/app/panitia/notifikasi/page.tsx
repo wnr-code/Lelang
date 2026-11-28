@@ -5,6 +5,10 @@ import { isPanitia } from "@/lib/auth";
 import { getSubmissions, getDashboardCounts } from "@/lib/queries";
 import { ROUTINE, nextMalamJumatKe4, formatRoutineDate } from "@/lib/routine";
 import { SubmissionStatusChip } from "@/components/ui";
+import { CronTrigger } from "@/components/cron-trigger";
+import { getActiveEvents } from "@/lib/queries";
+import { getRsvpSummary } from "@/lib/push";
+import { eventStartsAt, formatEventTime } from "@/lib/event-time";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notifikasi" };
@@ -15,6 +19,8 @@ export default async function NotifikasiPage() {
   const pending = all.filter((s) => s.status === "pending" || s.status === "needs_confirmation");
   const counts = await getDashboardCounts();
   const nextRoutine = nextMalamJumatKe4();
+  const activeEvents = await getActiveEvents();
+  const rsvps = await Promise.all(activeEvents.map(async (ev) => ({ ev, summary: await getRsvpSummary(ev.id) })));
 
   return (
     <div>
@@ -54,6 +60,33 @@ export default async function NotifikasiPage() {
             <p className="text-xs text-stone-400">{ROUTINE.time} · {ROUTINE.place}</p>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6 space-y-3">
+        <CronTrigger />
+        {rsvps.map(({ ev, summary }) => {
+          const starts = eventStartsAt(ev);
+          return (
+            <div key={ev.id} className="card px-5 py-4">
+              <p className="text-sm font-extrabold text-ink">{ev.title}</p>
+              <p className="text-xs text-stone-400">
+                {starts ? starts.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "Tanggal belum diatur"}
+                {ev.event_time ? ` · ${formatEventTime(ev.event_time)}` : ""}
+              </p>
+              <div className="mt-2 flex gap-2">
+                <span className="chip bg-emerald-100 text-emerald-800">Hadir: {summary.hadir}</span>
+                <span className="chip bg-stone-100 text-stone-600">Tidak: {summary.tidak}</span>
+              </div>
+              {summary.recent.length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs text-stone-500">
+                  {summary.recent.slice(0, 6).map((r) => (
+                    <li key={r.id}>{r.nickname || "Anggota"} — <b className={r.answer === "hadir" ? "text-emerald-700" : "text-stone-500"}>{r.answer === "hadir" ? "Hadir" : "Tidak"}</b></li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {pending.length > 0 && (

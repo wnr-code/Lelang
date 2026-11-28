@@ -34,10 +34,10 @@ export default async function PanitiaLayout({ children }: { children: React.Reac
             className="flex shrink-0 items-center gap-2 rounded-full bg-white py-1 pl-1 pr-2.5 ring-1 ring-emerald-900/10 transition hover:bg-emerald-50"
           >
             <span className="relative">
-              <Avatar name="Admin Panitia" className="h-9 w-9 text-[11px]" />
+              <Avatar name="Admin Panitia" className="h-9 w-9 text-[12px]" />
               <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
             </span>
-            <span className="hidden text-[11px] font-extrabold leading-tight text-ink sm:block">
+            <span className="hidden text-[12px] font-extrabold leading-tight text-ink sm:block">
               Admin<br />Panitia
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-stone-400" />
@@ -50,7 +50,7 @@ export default async function PanitiaLayout({ children }: { children: React.Reac
         <main className="min-w-0 flex-1 pb-24 lg:pb-8">{children}</main>
       </div>
 
-      <footer className="border-t border-emerald-900/5 py-4 text-center text-[11px] text-stone-400">
+      <footer className="border-t border-emerald-900/5 py-4 text-center text-[12px] text-stone-400">
         Lelang Kebaikan Cigatas · Korwil Cigatas · Bersama dalam Kebaikan
       </footer>
       <AdminNav pendingCount={counts.pending} />

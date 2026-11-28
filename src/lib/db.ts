@@ -35,7 +35,7 @@ export function getDb(): DatabaseSync {
   return db;
 }
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function submissionsDDL(name: string): string {
   return `CREATE TABLE IF NOT EXISTS ${name} (
@@ -103,7 +103,9 @@ function rebuild(db: DatabaseSync, table: string, ddl: (n: string) => string, ma
 function upgrade(db: DatabaseSync) {
   const v = (db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
   if (v >= SCHEMA_VERSION) return;
+  addColumn(db, "events", "event_time", "TEXT");
   addColumn(db, "items", "kind", "TEXT NOT NULL DEFAULT 'barang'");
+  addColumn(db, "items", "category", "TEXT NOT NULL DEFAULT 'barang'");
   addColumn(db, "submissions", "unit", "TEXT NOT NULL DEFAULT ''");
   addColumn(db, "submissions", "availability", "TEXT NOT NULL DEFAULT ''");
   addColumn(db, "fulfillments", "received_at", "TEXT");
@@ -113,6 +115,12 @@ function upgrade(db: DatabaseSync) {
   db.exec("CREATE INDEX IF NOT EXISTS idx_submissions_item ON submissions(item_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_surplus_event ON surplus(event_id)");
   db.exec("UPDATE fulfillments SET received_at = created_at WHERE received = 1 AND received_at IS NULL");
+  // Kategori awal untuk data lama: tenaga, sembako (bahan pokok), lainnya, sisanya barang.
+  db.exec("UPDATE items SET category = 'tenaga' WHERE kind = 'tenaga'");
+  db.exec(`UPDATE items SET category = 'sembako' WHERE kind = 'barang' AND (
+    name LIKE '%eras%' OR name LIKE '%ula%' OR name LIKE '%opi%' OR name LIKE '%ie %'
+    OR name LIKE '%Air%' OR name LIKE '%nack%' OR name LIKE '%inyak%' OR name LIKE '%eh%' OR name LIKE '%ue%')`);
+  db.exec("UPDATE items SET category = 'lainnya' WHERE kind = 'barang' AND name LIKE '%ainnya%'");
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
 
@@ -124,6 +132,7 @@ function migrate(db: DatabaseSync) {
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     event_date TEXT,
+    event_time TEXT,
     location TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','active','completed','archived')),
     cover_image TEXT,
@@ -135,6 +144,7 @@ function migrate(db: DatabaseSync) {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     kind TEXT NOT NULL DEFAULT 'barang' CHECK (kind IN ('barang','tenaga')),
+    category TEXT NOT NULL DEFAULT 'barang' CHECK (category IN ('sembako','barang','tenaga','lainnya')),
     name TEXT NOT NULL,
     target_qty REAL,
     target_label TEXT NOT NULL,
@@ -171,6 +181,39 @@ function migrate(db: DatabaseSync) {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    nickname TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS event_rsvps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL DEFAULT '',
+    nickname TEXT NOT NULL DEFAULT '',
+    answer TEXT NOT NULL CHECK (answer IN ('hadir','tidak')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (event_id, endpoint)
+  );
+
+  CREATE TABLE IF NOT EXISTS push_reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (event_id, endpoint)
+  );
+
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_items_event ON items(event_id);
   CREATE INDEX IF NOT EXISTS idx_submissions_event ON submissions(event_id);
   CREATE INDEX IF NOT EXISTS idx_submissions_item ON submissions(item_id);
@@ -187,11 +230,11 @@ function migrate(db: DatabaseSync) {
 
 function seed(db: DatabaseSync) {
   const insEvent = db.prepare(
-    `INSERT INTO events (slug,title,description,event_date,location,status,cover_image,completed_at)
-     VALUES (?,?,?,?,?,?,?,?)`
+    `INSERT INTO events (slug,title,description,event_date,location,status,cover_image,completed_at,event_time)
+     VALUES (?,?,?,?,?,?,?,?,?)`
   );
   const insItem = db.prepare(
-    `INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,is_open,kind) VALUES (?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,is_open,kind,category) VALUES (?,?,?,?,?,?,?,?,?,?)`
   );
   const insSub = db.prepare(
     `INSERT INTO submissions (event_id,item_id,nickname,qty,qty_label,message,contact,status,track_code,decided_at,decision_note)
@@ -217,39 +260,44 @@ function seed(db: DatabaseSync) {
     "Balai Warga Cigatas",
     "active",
     null,
-    null
+    null,
+    "19:30"
   );
   const eid = Number(active.lastInsertRowid);
 
-  const items: Array<[string, number | null, string, string, string, number]> = [
-    ["Beras", 40, "40 Kg", "Kg", "Untuk konsumsi bersama saat acara.", 0],
-    ["Kopi Campur", 8, "8 Dus", "Dus", "Sajian hangat untuk warga yang hadir.", 1],
-    ["Air Mineral", null, "Secukupnya", "", "Botol atau gelas, sesuai kesediaan.", 2],
-    ["Gula Pasir", 6, "6 Kg", "Kg", "Pendamping kopi dan teh.", 3],
-    ["Mie Instan", 5, "5 Dus", "Dus", "Cadangan konsumsi panitia.", 4],
-    ["Snack Anak", 60, "60 Bungkus", "Bungkus", "Untuk adik-adik yang ikut hadir.", 5],
-    ["Kantong Plastik", null, "Secukupnya", "", "Membantu pembagian barang.", 6],
-    ["Kebutuhan Lainnya", null, "Sesuai arahan panitia", "", "Terbuka untuk bantuan lain yang bermanfaat.", 7],
+  const items: Array<[string, number | null, string, string, string, number, string]> = [
+    ["Beras", 40, "40 Kg", "Kg", "Untuk konsumsi bersama saat acara.", 0, "sembako"],
+    ["Kopi Campur", 8, "8 Dus", "Dus", "Sajian hangat untuk warga yang hadir.", 1, "sembako"],
+    ["Air Mineral", null, "Secukupnya", "", "Botol atau gelas, sesuai kesediaan.", 2, "sembako"],
+    ["Gula Pasir", 6, "6 Kg", "Kg", "Pendamping kopi dan teh.", 3, "sembako"],
+    ["Mie Instan", 5, "5 Dus", "Dus", "Cadangan konsumsi panitia.", 4, "sembako"],
+    ["Snack Anak", 60, "60 Bungkus", "Bungkus", "Untuk adik-adik yang ikut hadir.", 5, "sembako"],
+    ["Kantong Plastik", null, "Secukupnya", "", "Membantu pembagian barang.", 6, "barang"],
+    ["Tikar / Karpet", 6, "6 Lembar", "Lembar", "Alas duduk jamaah saat acara.", 7, "barang"],
+    ["Sound System & Mic", 1, "1 Set", "Set", "Pengeras suara dan mikrofon acara.", 8, "barang"],
+    ["Kebutuhan Lainnya", null, "Sesuai arahan panitia", "", "Terbuka untuk bantuan lain yang bermanfaat.", 9, "lainnya"],
   ];
   const itemIds: number[] = [];
-  for (const [name, qty, label, unit, note, order] of items) {
-    itemIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1, "barang").lastInsertRowid));
+  for (const [name, qty, label, unit, note, order, category] of items) {
+    itemIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1, "barang", category).lastInsertRowid));
   }
 
   // Kebutuhan tenaga (bantuan non-barang) untuk kegiatan aktif.
   const tenaga: Array<[string, number | null, string, string, string, number]> = [
-    ["Tenaga Masak (Dapur Umum)", 6, "6 Orang", "Orang", "Membantu memasak konsumsi untuk tamu.", 90],
-    ["Tenaga Bongkar & Angkut", 4, "4 Orang", "Orang", "Menyiapkan dan menata barang di lokasi.", 91],
-    ["Tenaga Kebersihan", 3, "3 Orang", "Orang", "Merapikan lokasi sebelum dan sesudah acara.", 92],
+    ["Juru Parkir", 4, "4 Orang", "Orang", "Mengatur parkir kendaraan jamaah dengan ramah.", 90],
+    ["Tenaga Masak (Dapur Umum)", 6, "6 Orang", "Orang", "Membantu memasak konsumsi untuk tamu.", 91],
+    ["Tenaga Bongkar & Angkut", 4, "4 Orang", "Orang", "Menyiapkan dan menata barang di lokasi.", 92],
+    ["Tenaga Kebersihan", 3, "3 Orang", "Orang", "Merapikan lokasi sebelum dan sesudah acara.", 93],
+    ["Penerima Tamu", 3, "3 Orang", "Orang", "Menyambut dan mengarahkan tamu ke tempat duduk.", 94],
   ];
   const tenagaIds: number[] = [];
   for (const [name, qty, label, unit, note, order] of tenaga) {
-    tenagaIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1, "tenaga").lastInsertRowid));
+    tenagaIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1, "tenaga", "tenaga").lastInsertRowid));
   }
   db.prepare(
     `INSERT INTO submissions (event_id,item_id,nickname,qty,qty_label,unit,availability,message,contact,status,track_code)
      VALUES (?,?,?,?,?,?,?,?,?,'pending',?)`
-  ).run(eid, tenagaIds[0], "Mas Ridwan", 1, "1 Orang", "Orang", "Sabtu, 07.00–12.00 WIB", "Siap bantu masak dari pagi.", "", "CGT-TENAGA-01");
+  ).run(eid, tenagaIds[0], "Mas Ridwan", 1, "1 Orang", "Orang", "Sabtu, 16.00–20.00 WIB", "Siap bantu mengatur parkir jamaah.", "", "CGT-TENAGA-01");
 
   // Beras & Kopi sudah terpenuhi
   const s1 = insSub.run(eid, itemIds[0], "Kang Asep", 40, "40 Kg", "Beras dari rumah, siap diantar Sabtu.", "", "approved", "CGT-BERAS-01", now(), "Silakan antar ke balai warga, terima kasih!").lastInsertRowid;
@@ -280,7 +328,8 @@ function seed(db: DatabaseSync) {
     "Halaman Masjid Cigatas",
     "archived",
     null,
-    "2025-04-14 10:00:00"
+    "2025-04-14 10:00:00",
+    "09:00"
   );
   const pid = Number(past.lastInsertRowid);
   const pItems: Array<[string, number | null, string, string]> = [
@@ -292,7 +341,7 @@ function seed(db: DatabaseSync) {
   const pItemIds: number[] = [];
   for (let i = 0; i < pItems.length; i++) {
     const [name, qty, label, unit] = pItems[i];
-    pItemIds.push(Number(insItem.run(pid, name, qty, label, unit, "", i, 0, "barang").lastInsertRowid));
+    pItemIds.push(Number(insItem.run(pid, name, qty, label, unit, "", i, 0, "barang", "sembako").lastInsertRowid));
   }
   const ps1 = insSub.run(pid, pItemIds[0], "Kang Asep", 32, "32 Kg", "Beras lebih dari target, tidak apa-apa.", "", "approved", "CGT-HB-BERAS", "2025-04-10 09:00:00", "Alhamdulillah, terima kasih.").lastInsertRowid;
   insFul.run(pItemIds[0], Number(ps1), "Kang Asep", 32, "32 Kg", 1, 1, "Diterima penuh.");
