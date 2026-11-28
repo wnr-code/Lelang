@@ -142,10 +142,11 @@ export async function getSubmissions(eventId?: number, status?: string): Promise
     params.push(status);
   }
   const sql = `
-    SELECT s.*, i.name AS item_name, i.kind AS item_kind, e.title AS event_title, e.slug AS event_slug
+    SELECT s.*, i.name AS item_name, i.kind AS item_kind, e.title AS event_title, e.slug AS event_slug, f.received_at AS received_at
     FROM submissions s
     JOIN items i ON i.id = s.item_id
     JOIN events e ON e.id = s.event_id
+    LEFT JOIN fulfillments f ON f.submission_id = s.id
     ${where.length ? "WHERE " + where.join(" AND ") : ""}
     ORDER BY CASE s.status WHEN 'pending' THEN 0 WHEN 'needs_confirmation' THEN 1 ELSE 2 END, s.created_at DESC, s.id DESC`;
   return db.prepare(sql).all(...params) as unknown as SubmissionJoined[];

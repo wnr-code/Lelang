@@ -35,7 +35,7 @@ export function getDb(): DatabaseSync {
   return db;
 }
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function submissionsDDL(name: string): string {
   return `CREATE TABLE IF NOT EXISTS ${name} (
@@ -121,6 +121,32 @@ function upgrade(db: DatabaseSync) {
     name LIKE '%eras%' OR name LIKE '%ula%' OR name LIKE '%opi%' OR name LIKE '%ie %'
     OR name LIKE '%Air%' OR name LIKE '%nack%' OR name LIKE '%inyak%' OR name LIKE '%eh%' OR name LIKE '%ue%')`);
   db.exec("UPDATE items SET category = 'lainnya' WHERE kind = 'barang' AND name LIKE '%ainnya%'");
+
+  // v5: satu catatan pemenuhan per pengajuan + konsistensi status diterima fisik.
+  // Dedupe: pertahankan yang sudah diterima, lalu received_at terbaru, lalu id terkecil.
+  db.exec(`DELETE FROM fulfillments WHERE id IN (
+    SELECT id FROM (
+      SELECT id, ROW_NUMBER() OVER (PARTITION BY submission_id ORDER BY received DESC, received_at DESC, id ASC) AS rn
+      FROM fulfillments WHERE submission_id IS NOT NULL
+    ) WHERE rn > 1
+  )`);
+  // Pengajuan yang catatan pemenuhannya sudah diterima harus berstatus selesai (done).
+  db.exec(`UPDATE submissions SET status='done' WHERE status IN ('pending','needs_confirmation','approved','rejected')
+    AND EXISTS (SELECT 1 FROM fulfillments f WHERE f.submission_id=submissions.id AND f.received=1)`);
+  // Pengajuan selesai harus punya catatan diterima; jika belum, tandai diterima (pakai decided_at bila ada).
+  db.exec(`UPDATE fulfillments SET received=1, received_at=COALESCE(received_at, (SELECT COALESCE(s.decided_at, datetime('now')) FROM submissions s WHERE s.id=fulfillments.submission_id))
+    WHERE submission_id IN (SELECT id FROM submissions WHERE status='done') AND received=0`);
+  // Pengajuan disetujui/selesai tanpa catatan pemenuhan → buat catatan (received sesuai status).
+  db.exec(`INSERT INTO fulfillments (item_id,submission_id,person_name,qty,qty_label,received,received_at)
+    SELECT s.item_id, s.id, s.nickname, s.qty, s.qty_label,
+      CASE WHEN s.status='done' THEN 1 ELSE 0 END,
+      CASE WHEN s.status='done' THEN COALESCE(s.decided_at, datetime('now')) ELSE NULL END
+    FROM submissions s WHERE s.status IN ('approved','done')
+      AND NOT EXISTS (SELECT 1 FROM fulfillments f WHERE f.submission_id=s.id)`);
+  // Status non-approved/done tidak boleh punya catatan pemenuhan belum diterima.
+  db.exec(`DELETE FROM fulfillments WHERE received=0 AND submission_id IN (SELECT id FROM submissions WHERE status IN ('pending','needs_confirmation','rejected'))`);
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_fulfillments_submission ON fulfillments(submission_id) WHERE submission_id IS NOT NULL");
+
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
 

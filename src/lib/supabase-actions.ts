@@ -4,16 +4,6 @@
 import { getSupabase, throwIfError, TABLES, PHOTO_BUCKET } from "./supabase";
 import { newTrackCode, newProposalCode, slugify } from "./auth";
 import { mapPhoto } from "./mappers";
-import { logStatus } from "./status-log";
-import type { SubmissionStatus } from "./types";
-
-const DECISION_MESSAGE: Record<SubmissionStatus, string> = {
-  pending: "Pengajuan dikembalikan ke daftar tunggu.",
-  approved: "Pengajuan disetujui. Catat penerimaan di menu Kelola Barang.",
-  needs_confirmation: "Pengajuan ditandai perlu konfirmasi. Hubungi anggota lewat WhatsApp.",
-  rejected: "Pengajuan ditolak.",
-  done: "Pengajuan selesai — bantuan tercatat sudah diterima.",
-};
 
 type Res = { ok: true; message?: string; code?: string; id?: number } | { ok: false; error: string };
 const ok = (message?: string, extra?: { code?: string; id?: number }): Res => ({ ok: true, message, ...extra });
@@ -203,71 +193,9 @@ export async function sbDeleteItem(id: number): Promise<Res> {
   return ok("Item dihapus.");
 }
 
-// ---------- Keputusan pengajuan ----------
-
-export async function sbDecideSubmission(id: number, decision: SubmissionStatus, note: string): Promise<Res> {
-  const sb = getSupabase();
-  const { data: sub, error: subErr } = await sb
-    .from(TABLES.submissions)
-    .select("item_id, nickname, qty, qty_label")
-    .eq("id", id)
-    .maybeSingle();
-  throwIfError(subErr, "decideSubmission(baca)");
-  if (!sub) return fail("Pengajuan tidak ditemukan.");
-  const { error: upErr } = await sb
-    .from(TABLES.submissions)
-    .update({ status: decision, decided_at: nowISO(), decision_note: note.slice(0, 300) })
-    .eq("id", id);
-  throwIfError(upErr, "decideSubmission");
-
-  const { data: existing, error: exErr } = await sb
-    .from(TABLES.fulfillments)
-    .select("id, received_at")
-    .eq("submission_id", id)
-    .maybeSingle();
-  throwIfError(exErr, "decideSubmission(cek fulfillment)");
-
-  if (decision === "approved") {
-    // Disetujui = kesediaan dicatat, BELUM diterima. Verifikasi di menu Kelola Barang.
-    if (!existing) {
-      const { error: insErr } = await sb.from(TABLES.fulfillments).insert({
-        item_id: sub.item_id,
-        submission_id: id,
-        person_name: sub.nickname,
-        qty: sub.qty,
-        qty_label: sub.qty_label,
-      });
-      throwIfError(insErr, "decideSubmission(insert fulfillment)");
-    }
-  } else if (decision === "rejected") {
-    const { error: delErr } = await sb
-      .from(TABLES.fulfillments)
-      .delete()
-      .eq("submission_id", id)
-      .eq("received", false);
-    throwIfError(delErr, "decideSubmission(hapus fulfillment)");
-  } else if (decision === "done") {
-    if (!existing) {
-      const { error: insErr } = await sb.from(TABLES.fulfillments).insert({
-        item_id: sub.item_id,
-        submission_id: id,
-        person_name: sub.nickname,
-        qty: sub.qty,
-        qty_label: sub.qty_label,
-        received: true,
-        received_at: nowISO(),
-      });
-      throwIfError(insErr, "decideSubmission(insert diterima)");
-    } else {
-      const { error: upErr } = await sb
-        .from(TABLES.fulfillments)
-        .update({ received: true, received_at: existing.received_at ?? nowISO() })
-        .eq("id", existing.id);
-      throwIfError(upErr, "decideSubmission(tandai diterima)");
-    }
-  }
-  return ok(DECISION_MESSAGE[decision]);
-}
+// Keputusan pengajuan & penerimaan kini ditangani atomik oleh RPC
+// `panitia_submission_transition` / `panitia_delete_fulfillment`
+// (lihat src/lib/submission-mutations.ts). Tidak ada mutasi multi-langkah di sini.
 
 // ---------- Barang & penanggung jawab ----------
 
@@ -289,31 +217,6 @@ export async function sbAddFulfillment(p: {
   return ok("Data barang ditambahkan.");
 }
 
-export async function sbToggleReceived(id: number, received: boolean): Promise<Res> {
-  const sb = getSupabase();
-  const { data: f, error: readErr } = await sb
-    .from(TABLES.fulfillments)
-    .select("submission_id")
-    .eq("id", id)
-    .maybeSingle();
-  throwIfError(readErr, "toggleReceived(baca)");
-  const { error } = await sb
-    .from(TABLES.fulfillments)
-    .update({ received, received_at: received ? nowISO() : null })
-    .eq("id", id);
-  throwIfError(error, "toggleReceived");
-  if (f?.submission_id) {
-    const { error: subErr } = await sb
-      .from(TABLES.submissions)
-      .update({ status: received ? "done" : "approved" })
-      .eq("id", f.submission_id)
-      .in("status", ["approved", "done"]);
-    throwIfError(subErr, "toggleReceived(status pengajuan)");
-    await logStatus("submission", Number(f.submission_id), received ? "done" : "approved", received ? "Penerimaan barang diverifikasi panitia." : "Tanda diterima dibatalkan panitia.", "panitia");
-  }
-  return ok(received ? "Barang ditandai diterima." : "Tanda diterima dibatalkan.");
-}
-
 export async function sbSetPic(itemId: number, fulfillmentId: number): Promise<Res> {
   const sb = getSupabase();
   const { error: e1 } = await sb.from(TABLES.fulfillments).update({ is_pic: false }).eq("item_id", itemId);
@@ -321,12 +224,6 @@ export async function sbSetPic(itemId: number, fulfillmentId: number): Promise<R
   const { error: e2 } = await sb.from(TABLES.fulfillments).update({ is_pic: true }).eq("id", fulfillmentId).eq("item_id", itemId);
   throwIfError(e2, "setPic");
   return ok("Penanggung jawab ditetapkan.");
-}
-
-export async function sbDeleteFulfillment(id: number): Promise<Res> {
-  const { error } = await getSupabase().from(TABLES.fulfillments).delete().eq("id", id);
-  throwIfError(error, "deleteFulfillment");
-  return ok("Data barang dihapus.");
 }
 
 // ---------- Surplus ----------
