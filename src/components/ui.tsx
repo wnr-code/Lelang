@@ -1,20 +1,20 @@
 import Link from "next/link";
-import { Heart, HandHeart, Archive, ShieldCheck } from "lucide-react";
+import Image from "next/image";
+import { Heart, Archive, ShieldCheck, Info } from "lucide-react";
 import type { ItemStatus, SubmissionStatus } from "@/lib/types";
 import { ITEM_STATUS_LABEL } from "@/lib/types";
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
-        <HandHeart className="h-5 w-5" />
-      </span>
-      {!compact && (
-        <span className="leading-tight">
-          <span className="block text-sm font-extrabold tracking-tight text-ink">CIGATAS</span>
-          <span className="block text-[10px] font-semibold uppercase tracking-widest text-emerald-700">Lelang Kebaikan</span>
-        </span>
-      )}
+    <Link href="/" className="flex items-center gap-2.5" aria-label="Lelang Kebaikan Cigatas — beranda">
+      <Image
+        src="/images/logo-cigatas.webp"
+        alt="Lelang Kebaikan Cigatas"
+        width={1420}
+        height={945}
+        className={compact ? "h-9 w-auto" : "h-12 w-auto"}
+        priority
+      />
     </Link>
   );
 }
@@ -25,6 +25,10 @@ export function PublicHeader() {
       <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
         <Logo />
         <nav className="flex items-center gap-1">
+          <Link href="/tentang" className="btn-ghost">
+            <Info className="h-4 w-4" />
+            <span className="hidden sm:inline">Tentang</span>
+          </Link>
           <Link href="/arsip" className="btn-ghost">
             <Archive className="h-4 w-4" />
             <span className="hidden sm:inline">Arsip</span>
@@ -43,6 +47,12 @@ export function PublicFooter() {
   return (
     <footer className="mt-16 border-t border-stone-900/5 bg-white/60">
       <div className="mx-auto max-w-3xl px-4 py-8 text-center">
+        <nav className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-bold text-emerald-700">
+          <Link href="/tentang" className="hover:underline">Tentang</Link>
+          <Link href="/arsip" className="hover:underline">Arsip Kegiatan</Link>
+          <Link href="/lacak" className="hover:underline">Lacak Bantuan</Link>
+          <Link href="/panitia" className="hover:underline">Panitia</Link>
+        </nav>
         <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-emerald-700">
           <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
           Satu Kepedulian, Banyak Kebaikan
