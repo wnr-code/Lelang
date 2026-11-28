@@ -2,8 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight, CalendarDays, MapPin, Heart, Sparkles, PackageOpen, HandHeart,
-  ShieldCheck, Users, Wheat, Coffee, Droplets, Gift, Package,
+  ShieldCheck, Users, Wheat, Coffee, Droplets, Gift, Package, Moon, Clock3, Mic,
 } from "lucide-react";
+import { ROUTINE, nextMalamJumatKe4, formatRoutineDate } from "@/lib/routine";
 import { PublicHeader, PublicFooter, ItemStatusChip, ProgressBar, formatDate } from "@/components/ui";
 import { getActiveEvents, getItemsWithStatus, getEventProgress, getArchivedEvents } from "@/lib/queries";
 import type { ItemWithStatus } from "@/lib/types";
@@ -28,6 +29,7 @@ const TRUST = [
 export default async function HomePage() {
   const events = await getActiveEvents();
   const archived = await getArchivedEvents();
+  const nextRoutine = nextMalamJumatKe4();
   const eventData = await Promise.all(
     events.map(async (ev) => ({
       ev,
@@ -74,6 +76,37 @@ export default async function HomePage() {
                 <p className="text-[10px] leading-tight text-emerald-900/60">{d}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Pengajian rutin bulanan */}
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white shadow">
+              <Moon className="h-4 w-4" /> Pengajian Rutin
+            </span>
+            <span className="chip bg-amber-100 text-amber-800">{ROUTINE.freq}</span>
+          </div>
+          <div className="card overflow-hidden">
+            <div className="grid gap-0 sm:grid-cols-[auto,1fr]">
+              <Image
+                src={ROUTINE.poster}
+                alt="Poster Kajian Rutin Malam Jum'at"
+                width={800}
+                height={1422}
+                className="h-48 w-full object-cover object-top sm:h-full sm:w-40"
+              />
+              <div className="px-5 py-4">
+                <h3 className="text-base font-extrabold text-ink">{ROUTINE.title}</h3>
+                <p className="mt-1 text-xs font-bold text-emerald-700">Berikutnya: {formatRoutineDate(nextRoutine)}</p>
+                <div className="mt-2 space-y-1 text-xs text-stone-500">
+                  <p className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-emerald-600" /> {ROUTINE.time}</p>
+                  <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-emerald-600" /> {ROUTINE.place}</p>
+                  <p className="flex items-center gap-1.5"><Mic className="h-3.5 w-3.5 text-emerald-600" /> {ROUTINE.speaker} · {ROUTINE.speakerRole}</p>
+                </div>
+                <p className="mt-2 text-[11px] font-semibold text-stone-400">{ROUTINE.hashtag} · Terbuka untuk anggota Cigatas</p>
+              </div>
+            </div>
           </div>
         </section>
 
