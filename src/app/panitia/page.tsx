@@ -1,181 +1,193 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ComponentType } from "react";
 import { redirect } from "next/navigation";
 import {
-  Users, CalendarDays, Package, Inbox, ChevronRight, MapPin, TrendingUp, BarChart3,
-  HandHeart, LayoutGrid, CalendarPlus, Gift, ClipboardList, Recycle, Lightbulb,
+  Users, Package, PackageCheck, TrendingUp, CalendarDays, MapPin, ChevronRight,
+  Lightbulb, Megaphone, CalendarPlus,
 } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
-import { getDashboardCounts, getActiveEvents, getSubmissions } from "@/lib/queries";
-import { Avatar, SubmissionStatusChip, relativeTime } from "@/components/ui";
+import {
+  getDashboardCounts, getActiveEvents, getAllEvents, getSubmissions, getProposals,
+  getItemsWithStatus, getFulfillmentsForEvent,
+} from "@/lib/queries";
+import { Avatar, SubmissionStatusChip, ProposalStatusChip, relativeTime, formatDate } from "@/components/ui";
+import { ProgressStepper } from "@/components/progress-stepper";
+import { formatEventTime } from "@/lib/event-time";
 
 export const dynamic = "force-dynamic";
 
-const MENUS = [
-  { href: "/panitia/kegiatan", title: "Kelola Kegiatan", desc: "Buat & atur kegiatan", icon: CalendarPlus, tile: "bg-emerald-50", ic: "bg-emerald-600" },
-  { href: "/panitia/pengajuan", title: "Kelola Pengajuan", desc: "Verifikasi bantuan anggota", icon: ClipboardList, tile: "bg-sky-50", ic: "bg-sky-600" },
-  { href: "/panitia/usulan", title: "Kelola Usulan", desc: "Setujui usulan item baru", icon: Lightbulb, tile: "bg-amber-50", ic: "bg-amber-500" },
-  { href: "/panitia/kebutuhan", title: "Kelola Kebutuhan", desc: "Daftar barang & tenaga", icon: Package, tile: "bg-amber-50", ic: "bg-amber-500" },
-  { href: "/panitia/barang", title: "Kelola Barang", desc: "Penerimaan & penanggung jawab", icon: Gift, tile: "bg-violet-50", ic: "bg-violet-600" },
-  { href: "/panitia/laporan", title: "Laporan & Sisa", desc: "Hasil kegiatan & sisa barang", icon: Recycle, tile: "bg-emerald-50", ic: "bg-emerald-700" },
-  { href: "/panitia/pengaturan", title: "Pengaturan", desc: "Sistem, kontak & ekspor", icon: LayoutGrid, tile: "bg-stone-50", ic: "bg-stone-600" },
-];
+type RecentCard = {
+  key: string;
+  type: "submission" | "proposal";
+  name: string;
+  nickname: string;
+  qty: string;
+  status: string;
+  created_at: string;
+  event_id: number;
+};
 
-function dateBlock(dateStr: string | null) {
-  if (!dateStr) return { day: "—", mon: "", year: "" };
-  const d = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00" : ""));
-  if (Number.isNaN(d.getTime())) return { day: "—", mon: "", year: "" };
-  return {
-    day: String(d.getDate()),
-    mon: d.toLocaleDateString("id-ID", { month: "short" }),
-    year: String(d.getFullYear()),
-  };
+function ts(s: string): number {
+  const d = new Date(s.includes("T") ? s : s.replace(" ", "T"));
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
 }
 
 export default async function PanitiaDashboard() {
   if (!(await isPanitia())) redirect("/panitia/login");
+
   const counts = await getDashboardCounts();
   const active = await getActiveEvents();
-  const recent = (await getSubmissions(undefined, "all")).slice(0, 3);
+  const event = active[0] ?? (await getAllEvents())[0];
+
+  const allSubs = await getSubmissions(undefined, "all");
+  const pendingProps = await getProposals(undefined, "pending");
+
+  let items: Awaited<ReturnType<typeof getItemsWithStatus>> = [];
+  let fuls: Awaited<ReturnType<typeof getFulfillmentsForEvent>> = [];
+  if (event) {
+    [items, fuls] = await Promise.all([getItemsWithStatus(event.id), getFulfillmentsForEvent(event.id)]);
+  }
+
+  const totalItems = items.length;
+  const fulfilled = items.filter((i) => i.status === "fulfilled").length;
+  const percent = totalItems ? Math.round((fulfilled / totalItems) * 100) : 0;
+  const receivedCount = fuls.filter((f) => f.received === 1).length;
+  const eventSubs = event ? allSubs.filter((s) => s.event_id === event.id) : [];
+
+  // Stepper progres kegiatan keseluruhan (bukan persetujuan per anggota).
+  const stagesDone = [
+    !!event && event.status !== "draft",
+    totalItems > 0,
+    eventSubs.length > 0,
+    receivedCount > 0,
+    !!event && (event.status === "completed" || event.status === "archived"),
+  ];
+  let current = stagesDone.findIndex((d) => !d);
+  if (current === -1) current = 5;
+
+  // Kartu pengajuan terbaru: gabungan pengajuan infaq + usulan item baru.
+  const subCards: RecentCard[] = allSubs.slice(0, 5).map((s) => ({
+    key: `s-${s.id}`, type: "submission", name: s.item_name, nickname: s.nickname,
+    qty: s.qty_label || (s.unit ? `satuan ${s.unit}` : ""), status: s.status, created_at: s.created_at, event_id: s.event_id,
+  }));
+  const propCards: RecentCard[] = pendingProps.slice(0, 3).map((p) => ({
+    key: `p-${p.id}`, type: "proposal", name: p.name, nickname: p.nickname,
+    qty: p.qty_label || (p.qty != null ? `${p.qty}${p.unit ? " " + p.unit : ""}` : ""), status: p.status, created_at: p.created_at, event_id: p.event_id,
+  }));
+  const cards = [...subCards, ...propCards].sort((a, b) => ts(b.created_at) - ts(a.created_at)).slice(0, 4);
 
   return (
-    <div className="space-y-6">
-      {/* Banner */}
+    <div className="space-y-4">
+      {/* Hero kegiatan terdekat */}
       <div className="banner-grad animate-fade-up relative overflow-hidden rounded-[22px] px-5 py-5 text-white shadow-md shadow-emerald-800/20">
-        <div className="relative z-10 max-w-[75%]">
-          <h1 className="text-[22px] font-extrabold leading-tight">Dashboard Panitia</h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-emerald-50/90">
-            Pantau, kelola, dan wujudkan kegiatan terbaik bersama Cigatas.
-          </p>
+        <Image
+          src="/images/hero-mosque.webp"
+          alt=""
+          width={1400}
+          height={781}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-right opacity-20"
+          aria-hidden
+        />
+        <div className="relative z-10 max-w-[72%]">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-100">Kegiatan Terdekat</p>
+          {event ? (
+            <>
+              <h1 className="mt-1 text-[22px] font-extrabold leading-tight">{event.title}</h1>
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold text-emerald-50">
+                <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{formatDate(event.event_date)}{event.event_time ? ` · ${formatEventTime(event.event_time)}` : ""}</span>
+                {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{event.location}</span>}
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="mt-1 text-[20px] font-extrabold leading-tight">Belum ada kegiatan</h1>
+              <Link href="/panitia/kegiatan" className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold">
+                <CalendarPlus className="h-4 w-4" /> Buat kegiatan
+              </Link>
+            </>
+          )}
         </div>
-        <div className="pointer-events-none absolute right-4 top-4 flex items-end gap-1 opacity-90">
-          <BarChart3 className="h-12 w-12 text-emerald-300/70" strokeWidth={2.2} />
-          <TrendingUp className="h-10 w-10 text-gold" strokeWidth={2.4} />
-        </div>
-        <span className="pointer-events-none absolute -bottom-8 -right-6 h-24 w-24 rounded-full bg-emerald-400/20" />
+        <p className="absolute bottom-4 right-4 z-10 text-right text-[15px] font-extrabold italic leading-tight text-gold">
+          Dari Kita<br />Untuk Kita
+        </p>
       </div>
 
-      {/* Statistik nyata */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Stat icon={Users} label="Total Anggota" value={counts.members} caption="pengaju unik" tile="bg-sky-50" ic="text-emerald-600" />
-        <Stat icon={CalendarDays} label="Kegiatan Aktif" value={counts.active} caption="sedang berjalan" tile="bg-emerald-50" ic="text-emerald-700" />
-        <Stat icon={Package} label="Kebutuhan" value={counts.items} caption="item tercatat" tile="bg-amber-50" ic="text-amber-500" />
-        <Stat icon={Inbox} label="Menunggu" value={counts.pending} caption="perlu verifikasi" tile="bg-violet-50" ic="text-violet-500" />
+      {/* Progress Stepper 1–5 */}
+      <ProgressStepper current={current} />
+
+      {/* Statistik ringkas (tanpa nominal uang — sistem barang & tenaga) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat icon={Users} label="Anggota" value={counts.members} caption="pengaju unik" tile="bg-emerald-50" ic="text-emerald-600" />
+        <Stat icon={Package} label="Item Kebutuhan" value={totalItems} caption="item kegiatan" tile="bg-sky-50" ic="text-sky-600" />
+        <Stat icon={TrendingUp} label="Terpenuhi" value={`${percent}%`} caption={`${fulfilled}/${totalItems} item`} tile="bg-emerald-50" ic="text-emerald-700" />
+        <Stat icon={PackageCheck} label="Diterima Fisik" value={receivedCount} caption="sudah diterima" tile="bg-amber-50" ic="text-amber-500" />
       </div>
 
+      {/* Usulan menunggu persetujuan */}
       {counts.proposalsPending > 0 && (
-        <Link href="/panitia/usulan" className="flex items-center gap-3 rounded-[20px] bg-amber-50 px-4 py-3.5 ring-1 ring-amber-200 transition hover:shadow-md">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white"><Lightbulb className="h-5 w-5" /></span>
+        <Link href="/panitia/usulan" className="flex items-center gap-3 rounded-[20px] bg-amber-50 px-4 py-3 ring-1 ring-amber-200 transition hover:shadow-md">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white"><Lightbulb className="h-5 w-5" /></span>
           <p className="flex-1 text-[13px] font-extrabold text-amber-900">{counts.proposalsPending} usulan item baru menunggu persetujuan</p>
           <ChevronRight className="h-4 w-4 shrink-0 text-amber-600" />
         </Link>
       )}
 
-      {/* Menu utama terpisah */}
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-[15px] font-extrabold text-ink">
-          <LayoutGrid className="h-4 w-4 text-emerald-700" /> Menu Utama
-        </h2>
-        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-          {MENUS.map((m) => (
-            <Link key={m.href} href={m.href} className={`group flex items-center gap-3 rounded-[20px] ${m.tile} px-4 py-4 ring-1 ring-emerald-900/5 transition hover:shadow-md`}>
-              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${m.ic} text-white shadow`}>
-                <m.icon className="h-5 w-5" strokeWidth={2} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-extrabold text-ink">{m.title}</p>
-                <p className="truncate text-[12px] text-stone-500">{m.desc}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-stone-400 transition group-hover:translate-x-0.5" />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Jadwal kegiatan */}
+      {/* Pengajuan terbaru (kartu) */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-extrabold text-ink">Jadwal Kegiatan</h2>
-          <Link href="/panitia/kegiatan" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
+          <h2 className="flex items-center gap-2 text-[15px] font-extrabold text-ink">
+            <Megaphone className="h-4 w-4 text-emerald-700" /> Pengajuan Terbaru
+          </h2>
+          <Link href="/panitia/pengajuan" className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
             Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
-        {active.length === 0 ? (
-          <div className="card px-5 py-6 text-center text-sm text-stone-500">
-            Belum ada kegiatan aktif. Buat kegiatan di menu Kelola Kegiatan.
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {active.map((ev) => {
-              const db = dateBlock(ev.event_date);
-              return (
-                <Link key={ev.id} href={`/panitia/barang?event=${ev.id}`} className="card flex items-center gap-3 px-4 py-3.5 transition hover:shadow-md">
-                  <div className="flex w-[62px] shrink-0 flex-col items-center rounded-2xl bg-emerald-100/70 py-2">
-                    <span className="text-[20px] font-extrabold leading-none text-emerald-900">{db.day}</span>
-                    <span className="text-[13px] font-extrabold text-emerald-900">{db.mon}</span>
-                    <span className="text-[11px] font-semibold text-ink/60">{db.year}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-[15px] font-extrabold text-ink">{ev.title}</p>
-                      <span className="chip shrink-0 bg-emerald-100 text-emerald-800">Aktif</span>
-                    </div>
-                    <p className="mt-0.5 flex items-center gap-1 text-[12px] font-semibold text-stone-500">
-                      <MapPin className="h-3 w-3 shrink-0 text-emerald-600" />
-                      <span className="truncate">{ev.location || "Cigatas"}</span>
-                    </p>
-                    <p className="mt-0.5 line-clamp-1 text-[12px] text-stone-400">{ev.description}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Pengajuan terbaru */}
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-extrabold text-ink">Pengajuan Terbaru</h2>
-          <Link href="/panitia/pengajuan" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
-            Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-        {recent.length === 0 ? (
+        {cards.length === 0 ? (
           <div className="card px-5 py-6 text-center text-sm text-stone-500">Belum ada pengajuan masuk.</div>
         ) : (
-          <div className="card divide-y divide-stone-100 px-4">
-            {recent.map((s) => (
-              <Link key={s.id} href="/panitia/pengajuan" className="flex items-center gap-3 py-3 transition hover:opacity-80">
-                <Avatar name={s.nickname} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-extrabold text-ink">{s.nickname}</p>
-                  <p className="truncate text-[12px] text-stone-500">
-                    Permohonan {s.item_name.toLowerCase()} {s.qty_label ? `· ${s.qty_label}` : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <SubmissionStatusChip status={s.status} />
-                  <span className="text-[11px] text-stone-400">{relativeTime(s.created_at)}</span>
-                </div>
-              </Link>
-            ))}
+          <div className="space-y-2.5">
+            {cards.map((c) => <RecentSubmissionCard key={c.key} card={c} />)}
           </div>
         )}
       </section>
-
-      {/* Banner penutup */}
-      <Link
-        href="/panitia/laporan"
-        className="banner-grad flex items-center gap-4 rounded-full px-5 py-4 text-white shadow-md shadow-emerald-800/20 transition hover:opacity-95"
-      >
-        <HandHeart className="h-9 w-9 shrink-0 text-gold" strokeWidth={1.9} />
-        <p className="flex-1 text-[14px] font-extrabold leading-snug">
-          Sedekah Hari Ini,<br />Untuk Kebaikan Esok Nanti
-        </p>
-        <ChevronRight className="h-5 w-5 shrink-0 text-white/80" />
-      </Link>
     </div>
+  );
+}
+
+function RecentSubmissionCard({ card }: { card: RecentCard }) {
+  const isProposal = card.type === "proposal";
+  const href = isProposal
+    ? "/panitia/usulan"
+    : card.status === "approved"
+      ? `/panitia/barang?event=${card.event_id}`
+      : "/panitia/pengajuan";
+  const cta = isProposal
+    ? card.status === "pending" ? "Tinjau" : null
+    : card.status === "pending" ? "Verifikasi"
+      : card.status === "needs_confirmation" ? "Konfirmasi"
+        : card.status === "approved" ? "Catat Terima"
+          : null;
+
+  return (
+    <Link href={href} className="card flex items-center gap-3 px-4 py-3 transition hover:shadow-md">
+      <Avatar name={card.nickname} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-extrabold text-ink">{card.name}</p>
+        <p className="truncate text-[12px] text-stone-500">oleh {card.nickname}{card.qty ? ` · ${card.qty}` : ""}</p>
+        <span className={`chip mt-1 ${isProposal ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+          {isProposal ? "Usulan Baru" : "Item Admin"}
+        </span>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {isProposal
+          ? <ProposalStatusChip status={card.status as "pending" | "approved" | "rejected"} />
+          : <SubmissionStatusChip status={card.status as "pending" | "approved" | "needs_confirmation" | "rejected" | "done"} />}
+        <span className="text-[11px] text-stone-400">{relativeTime(card.created_at)}</span>
+        {cta && <span className="chip bg-emerald-600 text-white">{cta}</span>}
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" />
+    </Link>
   );
 }
 
@@ -183,14 +195,14 @@ function Stat({
   icon: Icon, label, value, caption, tile, ic,
 }: {
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-  label: string; value: number; caption: string; tile: string; ic: string;
+  label: string; value: number | string; caption: string; tile: string; ic: string;
 }) {
   return (
-    <div className={`rounded-[20px] ${tile} px-4 py-4 text-center ring-1 ring-emerald-900/5`}>
-      <Icon className={`mx-auto h-8 w-8 ${ic}`} strokeWidth={2} />
-      <p className="mt-2 text-[13px] font-bold text-ink/80">{label}</p>
-      <p className="text-[26px] font-extrabold leading-tight text-ink">{value.toLocaleString("id-ID")}</p>
-      <p className="text-[11px] font-semibold text-emerald-700">{caption}</p>
+    <div className={`rounded-[20px] ${tile} px-3 py-3.5 text-center ring-1 ring-emerald-900/5`}>
+      <Icon className={`mx-auto h-7 w-7 ${ic}`} strokeWidth={2} />
+      <p className="mt-1.5 text-[24px] font-extrabold leading-tight text-ink">{typeof value === "number" ? value.toLocaleString("id-ID") : value}</p>
+      <p className="text-[12px] font-bold text-ink/80">{label}</p>
+      <p className="text-[10px] font-semibold text-emerald-700">{caption}</p>
     </div>
   );
 }
