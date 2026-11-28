@@ -233,7 +233,7 @@ Liko Akbar 23 Des 2026 mulai **19:00** → pengingat otomatis **15:00** (4 jam s
 - RSVP tersimpan di `event_rsvps`; panitia melihat rekap Hadir/Tidak di `/panitia/notifikasi`.
 
 **Penjadwal pengingat (produksi).** `pg_cron` + `pg_net` di Supabase memanggil
-`POST https://lelang.cgs.my.id/api/cron/reminders` tiap **15 menit** dengan header
+`POST https://lelang.appwnr.workers.dev/api/cron/reminders` tiap **15 menit** dengan header
 `x-cron-key` = `app_settings.cron_secret`. Route memvalidasi kunci (atau cookie panitia),
 lalu mengirim pengingat untuk acara yang masuk jendela `[mulai − 4 jam, mulai)`.
 Idempoten lewat tabel `push_reminders` (tidak kirim ganda). Panitia juga bisa memicu
@@ -242,6 +242,11 @@ manual lewat tombol **Kirim Pengingat Sekarang** di `/panitia/notifikasi`.
 > Catatan: cron berjalan di sisi Supabase, jadi tidak perlu mengubah build command
 > Workers Builds maupun menambah `scheduled` handler di Worker. Selama route
 > `/api/cron/reminders` sudah ter-deploy, pengingat aktif otomatis.
+>
+> **Penting:** URL cron memakai domain `*.workers.dev` (bukan domain kustom
+> `lelang.cgs.my.id`) karena domain kustom dilindungi Cloudflare Bot Fight Mode /
+> challenge yang menolak permintaan server-ke-server (`403 Just a moment...`).
+> Domain `workers.dev` tidak kena challenge, sehingga panggilan pg_net sampai ke Worker.
 
 **Ukuran teks.** Dasar font dinaikkan 16→17px dan literal teks kecil +1px agar lebih
 terbaca di HP Android. Judul "Lelang Kebaikan" memakai grafis ketuk palu
