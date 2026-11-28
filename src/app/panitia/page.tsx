@@ -48,9 +48,10 @@ export default async function PanitiaDashboard() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-extrabold text-ink">Pusat Kendali Panitia</h1>
-        <p className="mt-1 text-sm text-stone-500">Kelola semuanya dari satu dashboard sederhana.</p>
+      <div className="banner-grad mb-6 rounded-3xl px-5 py-6 text-white shadow-md shadow-emerald-700/20">
+        <span className="chip bg-white/20 text-white">Dashboard</span>
+        <h1 className="mt-2 text-xl font-extrabold">Pusat Kendali Panitia</h1>
+        <p className="mt-1 text-sm text-emerald-50/90">Kelola semuanya dari satu dashboard sederhana.</p>
       </div>
 
       {/* Statistik ringkas */}

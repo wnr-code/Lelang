@@ -66,6 +66,9 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
   const contact = String(formData.get("contact") || "").trim().slice(0, 80);
 
   if (!nickname) return fail("Nama panggilan wajib diisi.");
+  if (!contact) return fail("Nomor WhatsApp wajib diisi agar panitia bisa follow up.");
+  const contactDigits = contact.replace(/\D/g, "");
+  if (contactDigits.length < 9 || contactDigits.length > 15) return fail("Nomor WhatsApp tidak valid. Contoh: 0812xxxx.");
   const item = await getItemById(itemId);
   if (!item) return fail("Item tidak ditemukan.");
   const event = await getEventById(item.event_id);

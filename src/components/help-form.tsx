@@ -104,8 +104,9 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
           <textarea id={`message-${item.id}`} name="message" maxLength={2000} rows={2} placeholder="mis. Siap diantar Sabtu sore" className="input resize-none" />
         </div>
         <div>
-          <label className="label" htmlFor={`contact-${item.id}`}>Kontak WA (opsional)</label>
-          <input id={`contact-${item.id}`} name="contact" maxLength={80} placeholder="mis. 0812xxxx (hanya untuk panitia)" className="input" />
+          <label className="label" htmlFor={`contact-${item.id}`}>Nomor WhatsApp (wajib)</label>
+          <input id={`contact-${item.id}`} name="contact" type="tel" inputMode="tel" required maxLength={80} placeholder="mis. 0812xxxx (untuk follow up panitia)" className="input" />
+          <p className="mt-1 text-[11px] text-stone-400">Wajib diisi agar panitia/admin bisa menghubungimu. Hanya terlihat oleh panitia.</p>
         </div>
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
         <button type="submit" disabled={pending} className="btn-primary w-full">

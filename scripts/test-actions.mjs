@@ -47,7 +47,7 @@ try { await A.loginAction(null, fd({ password: "cigatas-berbagi" })); } catch {}
 
 console.log("== Publik: ajukan bantuan ==");
 const longMessage = "snack 15 bungkus. " + "A".repeat(1500);
-r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "Teh Uji", qty: 15, message: longMessage }));
+r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "Teh Uji", qty: 15, message: longMessage, contact: "081234567890" }));
 check("submit berhasil", r.ok === true);
 check("dapat kode lacak", /^CGT-/.test(r.code || ""));
 const subCode = r.code;
@@ -151,8 +151,12 @@ check("upload >2 MB ditolak", r.ok === false);
 check("pesan error menyebut 2 MB", /2 MB/.test(r.error || ""));
 
 console.log("== Validasi input ==");
-r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "", qty: 5 }));
+r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "", qty: 5, contact: "081234567890" }));
 check("nama kosong ditolak", r.ok === false);
+r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "Tanpa WA", qty: 5 }));
+check("tanpa nomor WA ditolak", r.ok === false);
+r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "WA Salah", qty: 5, contact: "123" }));
+check("nomor WA tidak valid ditolak", r.ok === false);
 r = await A.addItemAction(null, fd({ event_id: 1, name: "", target_label: "5 Kg" }));
 check("nama item kosong ditolak", r.ok === false);
 

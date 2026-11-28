@@ -46,7 +46,7 @@ export function PublicHeader() {
 export function PublicFooter() {
   return (
     <footer className="mt-16 border-t border-stone-900/5 bg-white/60">
-      <div className="mx-auto max-w-3xl px-4 py-8 text-center">
+      <div className="mx-auto max-w-3xl px-4 pt-8 pb-24 text-center sm:pb-8">
         <nav className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-bold text-emerald-700">
           <Link href="/tentang" className="hover:underline">Tentang</Link>
           <Link href="/arsip" className="hover:underline">Arsip Kegiatan</Link>
