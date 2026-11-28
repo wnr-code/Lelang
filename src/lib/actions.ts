@@ -66,6 +66,9 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
   const contact = String(formData.get("contact") || "").trim().slice(0, 80);
 
   if (!nickname) return fail("Nama panggilan wajib diisi.");
+  if (!contact) return fail("Nomor WhatsApp wajib diisi agar panitia bisa follow up.");
+  const contactDigits = contact.replace(/\D/g, "");
+  if (contactDigits.length < 9 || contactDigits.length > 15) return fail("Nomor WhatsApp tidak valid. Contoh: 0812xxxx.");
   const item = await getItemById(itemId);
   if (!item) return fail("Item tidak ditemukan.");
   const event = await getEventById(item.event_id);
@@ -456,7 +459,7 @@ export async function uploadPhotoAction(_prev: unknown, formData: FormData): Pro
   const caption = String(formData.get("caption") || "").trim().slice(0, 500);
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return fail("Pilih file foto terlebih dahulu.");
-  if (file.size > 15 * 1024 * 1024) return fail("Ukuran foto maksimal 15 MB. Pilih foto yang lebih kecil.");
+  if (file.size > 2 * 1024 * 1024) return fail("Ukuran foto maksimal 2 MB. Foto dikompres otomatis di HP; jika masih besar, pilih foto lain.");
   const looksLikeImage = file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name);
   if (!looksLikeImage) return fail("File harus berupa gambar (JPG, PNG, atau WebP).");
   const event = await getEventById(eventId);

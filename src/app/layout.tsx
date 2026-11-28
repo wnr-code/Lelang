@@ -5,6 +5,7 @@ import "@fontsource/plus-jakarta-sans/600.css";
 import "@fontsource/plus-jakarta-sans/700.css";
 import "@fontsource/plus-jakarta-sans/800.css";
 import "./globals.css";
+import { MobileNav } from "@/components/mobile-nav";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lelang.cgs.my.id"),
@@ -43,7 +44,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
-      <body className="min-h-dvh font-sans">{children}</body>
+      <body className="min-h-dvh font-sans">
+        {children}
+        <MobileNav />
+      </body>
     </html>
   );
 }

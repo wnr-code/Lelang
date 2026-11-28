@@ -30,7 +30,7 @@ const STEPS = [
 
 const FAQ = [
   { q: "Apakah ada uang atau iuran?", a: "Tidak. Semua bantuan berbentuk barang atau kesediaan. Tidak ada nominal uang di mana pun." },
-  { q: "Apakah anggota harus membuat akun?", a: "Tidak. Cukup nama panggilan. Hanya panitia yang punya login aman." },
+  { q: "Apakah anggota harus membuat akun?", a: "Tidak. Cukup nama panggilan + nomor WA (wajib untuk follow up). Hanya panitia yang punya login aman." },
   { q: "Siapa yang menentukan penerima & penanggung jawab?", a: "Panitia. Anggota hanya mengusulkan kesediaan; penetapan ada di panitia." },
   { q: "Bagaimana tahu bantuan saya sudah diterima?", a: "Pantau lewat kode lacak, atau lihat progres item di halaman kegiatan." },
 ];
@@ -157,7 +157,7 @@ export default function TentangPage() {
               <ClipboardList className="h-4 w-4 text-emerald-600" /> Data & Privasi
             </p>
             <p className="mt-1 text-xs leading-relaxed text-stone-500">
-              Anggota cukup nama panggilan. Kontak opsional hanya untuk panitia. Data tersimpan terpusat dan aman.
+              Anggota cukup nama panggilan + nomor WA (wajib, untuk follow up panitia, hanya terlihat oleh panitia). Data tersimpan terpusat dan aman.
             </p>
           </div>
         </section>
