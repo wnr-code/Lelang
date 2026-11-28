@@ -22,8 +22,16 @@
   // foto sudah dikompres ke WebP saat upload dan next/image memakai unoptimized.
   "observability": {
     "enabled": true
-  }
-  // Environment variables produksi (PANITIA_PASSWORD, SESSION_SECRET,
-  // SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) diatur di dashboard Cloudflare
-  // atau via `wrangler secret put` — JANGAN ditulis di file ini.
+  },
+  // SUPABASE_URL bukan rahasia (URL proyek memang publik) — ditulis di sini
+  // supaya PASTI ada di runtime setiap deploy, tidak bergantung dashboard.
+  "vars": {
+    "SUPABASE_URL": "https://jxpjleqzpzrjbdrxxjgv.supabase.co"
+  },
+  // Pertahankan variabel yang diatur lewat dashboard saat `wrangler deploy`
+  // (tanpa ini, deploy akan MENGHAPUS vars dashboard yang tidak ada di file).
+  "keep_vars": true
+  // Secrets (SUPABASE_SERVICE_ROLE_KEY, SESSION_SECRET, PANITIA_PASSWORD)
+  // diatur di dashboard Cloudflare → Settings → Variables and Secrets
+  // (tipe Secret) atau via `wrangler secret put` — JANGAN ditulis di file ini.
 }
