@@ -498,6 +498,16 @@ export async function uploadPhotoAction(_prev: unknown, formData: FormData): Pro
     return ok(`Foto diupload & dikompres otomatis (${Math.round(compressed.length / 1024)} KB).`);
   } catch (e) {
     console.error("uploadPhoto", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/binding r2|bucket/i.test(msg)) {
+      return fail("Penyimpanan foto belum siap. Hubungi pengelola untuk memasang R2 bucket `liqo` (binding `Lelang`).");
+    }
+    if (/unsupported|mime|format|decode|invalid|signature/i.test(msg)) {
+      return fail("Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.");
+    }
+    if (/size|large|payload|entity|too big/i.test(msg)) {
+      return fail("Foto terlalu besar. Maksimal 2 MB.");
+    }
     return fail("Gagal memproses foto. Gunakan JPG/PNG/WebP yang valid, maks. 2 MB.");
   }
 }

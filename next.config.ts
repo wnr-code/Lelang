@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   eslint: { ignoreDuringBuilds: true },
   // Server Actions membatasi body default 1 MB — terlalu kecil untuk foto HP.
-  // Foto maks 15 MB (divalidasi di action), jadi beri ruang lebih untuk multipart.
+  // Foto maks 2 MB (divalidasi di action), jadi beri ruang lebih untuk multipart.
   experimental: {
     serverActions: {
       bodySizeLimit: "20mb",

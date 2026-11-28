@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  ArrowRight, CalendarDays, MapPin, Heart, PackageOpen, HandHeart, Moon,
-  Megaphone, Gavel, Package, Users, ChevronRight,
+  CalendarDays, MapPin, Heart, PackageOpen, HandHeart,
+  Megaphone, Gavel, Package, Users, ChevronRight, SearchCheck,
 } from "lucide-react";
 import { PublicHeader, PublicFooter, formatDate } from "@/components/ui";
 import { getActiveEvents, getArchivedEvents } from "@/lib/queries";
@@ -22,17 +22,16 @@ function dateBlock(dateStr: string | null) {
   };
 }
 
-const MENU = [
-  { href: "/#kegiatan", title: "Lelang Kebaikan", desc: "Berinfaq & Berdonasi", icon: Gavel, tone: "bg-amber-100 text-amber-700" },
-  { href: "/arsip", title: "Agenda Kegiatan", desc: "Lihat Jadwal & Info", icon: CalendarDays, tone: "bg-emerald-100 text-emerald-700" },
-  { href: "/#kegiatan", title: "Kebutuhan Kegiatan", desc: "Lihat & Dukung", icon: Package, tone: "bg-orange-100 text-orange-700" },
-  { href: "/tentang", title: "Profil & Kontak", desc: "Struktur & Pengurus", icon: Users, tone: "bg-emerald-100 text-emerald-700" },
-];
-
 export default async function HomePage() {
   const events = await getActiveEvents();
   const archived = await getArchivedEvents();
   const nextRoutine = nextMalamJumatKe4();
+  const menu = [
+    { href: "/#kegiatan", title: "Lelang Kebaikan", desc: "Berinfaq & Berdonasi", icon: Gavel, tone: "bg-amber-100 text-amber-700" },
+    { href: "/#informasi", title: "Agenda Kegiatan", desc: "Lihat Jadwal & Info", icon: CalendarDays, tone: "bg-emerald-100 text-emerald-700" },
+    { href: events[0] ? `/kegiatan/${events[0].slug}` : "/#kegiatan", title: "Kebutuhan Kegiatan", desc: "Lihat & Dukung", icon: Package, tone: "bg-orange-100 text-orange-700" },
+    { href: "/tentang", title: "Profil & Kontak", desc: "Struktur & Pengurus", icon: Users, tone: "bg-emerald-100 text-emerald-700" },
+  ];
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -103,7 +102,7 @@ export default async function HomePage() {
         </section>
 
         {/* Informasi kegiatan (pengajian rutin) */}
-        <section className="mt-8">
+        <section id="informasi" className="mt-8 scroll-mt-20">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-extrabold text-ink">Informasi Kegiatan</h2>
             <Link href="/tentang" className="text-xs font-bold text-emerald-700 hover:underline">Lihat Semua →</Link>
@@ -127,7 +126,7 @@ export default async function HomePage() {
         <section className="mt-8">
           <h2 className="mb-3 text-base font-extrabold text-ink">Menu Utama</h2>
           <div className="grid grid-cols-2 gap-3">
-            {MENU.map((m) => (
+            {menu.map((m) => (
               <Link key={m.title} href={m.href} className="card flex items-center gap-3 px-4 py-4 transition hover:shadow-md">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${m.tone}`}>
                   <m.icon className="h-5 w-5" />
@@ -140,6 +139,20 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
+        </section>
+
+        {/* Lacak bantuan */}
+        <section className="mt-6">
+          <Link href="/lacak" className="card flex items-center gap-4 px-4 py-4 transition hover:shadow-md">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+              <SearchCheck className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-extrabold text-ink">Lacak Bantuan Saya</p>
+              <p className="text-[10px] text-stone-400">Punya kode CGT-xxxxxx? Cek statusnya di sini.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" />
+          </Link>
         </section>
 
         {/* Arsip singkat */}

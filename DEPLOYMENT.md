@@ -12,7 +12,8 @@ Target: **Cloudflare Worker** `lelang.appwnr.workers.dev` + domain kustom **`lel
 | Aplikasi (Next.js 15, App Router) | ✅ Build produksi sukses |
 | Kompatibilitas Cloudflare Worker | ✅ Migrasi selesai, `opennextjs-cloudflare build` + `wrangler deploy --dry-run` lulus |
 | Database Supabase (skema + seed) | ✅ Sudah diterapkan ke proyek `supabase-rose-park` (ref `jxpjleqzpzrjbdrxxjgv`) |
-| Supabase Storage (bucket `photos`) | ✅ Sudah dibuat (publik, maks 15 MB, webp/jpeg/png) |
+| Supabase (database) | ✅ Skema + seed diterapkan; foto hanya menyimpan metadata di tabel `photos` |
+| Cloudflare R2 (bucket `liqo`, binding `Lelang`) | ✅ Wajib untuk foto produksi — sudah diatur di `wrangler.jsonc` |
 | Ekspor PDF/Excel (pilihan data) | ✅ Selesai & teruji |
 | Uji logika bisnis | ✅ `npm test` → 54/54 lulus |
 | Deploy ke Worker + domain | ⚠️ Tinggal dijalankan di akun Cloudflare Anda (lihat §3) |
@@ -32,15 +33,19 @@ Aplikasi sudah disesuaikan:
 | --- | --- | --- |
 | Database | SQLite (`data/cigatas.db`) | **Supabase** (PostgreSQL) |
 | Kompresi foto | **photon** (WASM) | **photon** (WASM) — sama, jalan di workerd |
-| Penyimpanan foto | filesystem `data/uploads` | **Supabase Storage** bucket `photos` |
-| Sajian foto | `/api/uploads/{name}` | URL publik Storage langsung |
+| Penyimpanan foto | filesystem `data/uploads` | **Cloudflare R2** bucket `liqo` (binding `Lelang`) |
+| Sajian foto | `/api/uploads/{name}` | `/api/foto/{key}` (dibaca dari R2 oleh Worker) |
 
 - Lapisan data **dual-mode**: `src/lib/queries.ts` + `src/lib/actions.ts` memilih Supabase bila
   env diisi; bila tidak, memakai SQLite. Modul SQLite di-import *lazy* sehingga tidak dievaluasi di Worker.
 - `sharp` hanya dipakai skrip build/test (`generate-icons`, `test-actions`), **tidak** ikut di-bundle.
-- `next/image` memakai `unoptimized: true` (foto sudah WebP ≤1600px), sehingga URL Storage remote
+- `next/image` memakai `unoptimized: true` (foto sudah WebP ≤1600px), sehingga foto dari R2
   berfungsi tanpa binding Cloudflare Images (berbayar).
-- Cache OpenNext memakai mode **dummy** (semua halaman `force-dynamic`), jadi **tidak butuh R2**.
+- Cache OpenNext memakai mode **dummy** (semua halaman `force-dynamic`). R2 dipakai **khusus foto**
+  (bucket `liqo`, binding `Lelang`), bukan untuk cache.
+- Foto: batas **2 MB** per file, dikompres otomatis ke WebP ≤1600px (photon WASM), lalu disimpan ke
+  R2 dengan key `{eventId}/{timestamp}-{acak}.webp`. Tabel `photos` di Supabase hanya menyimpan
+  path `/api/foto/...` + caption. Bucket **tidak perlu** domain publik — Worker yang menyajikan.
 
 Adapter: `@opennextjs/cloudflare` + `wrangler`. Konfigurasi: `wrangler.jsonc`, `open-next.config.ts`.
 
@@ -186,9 +191,10 @@ fungsi yang diminta. Ukuran ini normal untuk aplikasi Next.js + OpenNext dengan 
   RLS aktif, akses server via service-role (bypass RLS).
 - Seed: `supabase/seed.sql` — 2 kegiatan, 12 item, 11 pengajuan, 9 pemenuhan, 4 sisa, 2 foto.
   **Sudah diterapkan** ke proyek asli. Jangan jalankan ulang seed (ID eksplisit bisa bentrok).
-- Storage: bucket `photos` (publik) + policy baca publik. Foto produksi disimpan di sini.
-- Bila perlu proyek baru: jalankan `schema.sql` lalu `seed.sql` di SQL Editor Supabase, buat bucket
-  publik `photos`, lalu isi env §5.
+- Foto: **Cloudflare R2** bucket `liqo` dengan binding **`Lelang`** (lihat `wrangler.jsonc`).
+  Pastikan binding ini ada di Worker `lelang` (Settings → Bindings → R2 bucket). Supabase Storage
+  bucket `photos` lama tidak dipakai lagi untuk upload baru (foto lama tetap tampil bila URL-nya tersimpan).
+- Bila perlu proyek baru: jalankan `schema.sql` lalu `seed.sql` di SQL Editor Supabase, lalu isi env §5.
 
 ---
 

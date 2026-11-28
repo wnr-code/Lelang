@@ -33,7 +33,7 @@ export function PublicHeader({ notif = 0 }: { notif?: number }) {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <NotifBell count={notif} href="/tentang" />
+          <NotifBell count={notif} href="/#kegiatan" />
           <nav className="hidden items-center gap-1 sm:flex">
             <Link href="/tentang" className="btn-ghost"><Info className="h-4 w-4" /><span>Tentang</span></Link>
             <Link href="/arsip" className="btn-ghost"><Archive className="h-4 w-4" /><span>Arsip</span></Link>
