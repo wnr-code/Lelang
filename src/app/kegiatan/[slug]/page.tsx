@@ -64,7 +64,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
         {isActive && starts && (
           <div className="mt-4">
-            <PushReminder eventId={event.id} eventTitle={event.title} eventSlug={event.slug} startsAt={starts.toISOString()} />
+            <PushReminder eventId={event.id} eventTitle={event.title} eventSlug={event.slug} startsAt={starts.toISOString()} hideControls />
           </div>
         )}
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   UserRound, Phone, Save, Trash2, SearchCheck, Megaphone, Info, Archive, ShieldCheck, ChevronRight, Check,
 } from "lucide-react";
+import { NotificationSettings } from "@/components/notification-settings";
 
 export const NICKNAME_KEY = "cigatas.nickname";
 export const CONTACT_KEY = "cigatas.contact";
@@ -100,6 +101,8 @@ export function MemberSettings() {
           </div>
         </div>
       </section>
+
+      <NotificationSettings />
 
       <section className="card divide-y divide-stone-100 px-5">
         {LINKS.map((l) => (
