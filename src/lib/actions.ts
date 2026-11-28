@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import crypto from "node:crypto";
 import { createSession, destroySession, isPanitia, newTrackCode, slugify, verifyPassword } from "./auth";
 import { getEventById, getItemById } from "./queries";
-import { isSupabaseConfigured } from "./supabase";
+import { isSupabaseConfigured, loadSqliteDb } from "./supabase";
 import {
   sbSubmitHelp,
   sbCreateEvent,
@@ -88,7 +88,7 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   let code = newTrackCode();
   while (db.prepare("SELECT 1 FROM submissions WHERE track_code = ?").get(code)) code = newTrackCode();
@@ -120,7 +120,7 @@ export async function createEventAction(_prev: unknown, formData: FormData): Pro
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   let slug = slugify(title);
   while (db.prepare("SELECT 1 FROM events WHERE slug = ?").get(slug)) slug = `${slug}-${crypto.randomBytes(2).toString("hex")}`;
@@ -146,7 +146,7 @@ export async function updateEventAction(_prev: unknown, formData: FormData): Pro
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb()
     .prepare("UPDATE events SET title=?, description=?, event_date=?, location=? WHERE id=?")
     .run(title, description, eventDate || null, location, id);
@@ -164,7 +164,7 @@ export async function setEventStatusAction(id: number, status: string): Promise<
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   if (status === "completed" || status === "archived") {
     db.prepare("UPDATE events SET status=?, completed_at=COALESCE(completed_at, datetime('now')) WHERE id=?").run(status, id);
@@ -182,7 +182,7 @@ export async function deleteEventAction(id: number): Promise<ActionResult> {
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("DELETE FROM events WHERE id=?").run(id);
   revalidateAll();
   return ok("Kegiatan dihapus.");
@@ -212,7 +212,7 @@ export async function addItemAction(_prev: unknown, formData: FormData): Promise
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   const max = (db.prepare("SELECT COALESCE(MAX(sort_order),0) AS m FROM items WHERE event_id=?").get(eventId) as { m: number }).m;
   db.prepare("INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order) VALUES (?,?,?,?,?,?,?)")
@@ -237,7 +237,7 @@ export async function updateItemAction(_prev: unknown, formData: FormData): Prom
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("UPDATE items SET name=?, target_qty=?, target_label=?, unit=?, note=? WHERE id=?")
     .run(name, targetQty, targetLabel, unit, note, id);
   revalidateAll();
@@ -251,7 +251,7 @@ export async function toggleItemOpenAction(id: number, isOpen: boolean): Promise
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("UPDATE items SET is_open=? WHERE id=?").run(isOpen ? 1 : 0, id);
   revalidateAll();
   return ok(isOpen ? "Item dibuka kembali." : "Item ditandai terpenuhi.");
@@ -264,7 +264,7 @@ export async function deleteItemAction(id: number): Promise<ActionResult> {
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("DELETE FROM items WHERE id=?").run(id);
   revalidateAll();
   return ok("Item dihapus.");
@@ -280,7 +280,7 @@ export async function decideSubmissionAction(id: number, decision: "approved" | 
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   const sub = db.prepare("SELECT * FROM submissions WHERE id=?").get(id) as { item_id: number; nickname: string; qty: number | null; qty_label: string } | undefined;
   if (!sub) return fail("Pengajuan tidak ditemukan.");
@@ -325,7 +325,7 @@ export async function addFulfillmentAction(_prev: unknown, formData: FormData): 
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("INSERT INTO fulfillments (item_id,person_name,qty,qty_label,note) VALUES (?,?,?,?,?)")
     .run(itemId, personName, qty, label, note);
   revalidateAll();
@@ -339,7 +339,7 @@ export async function toggleReceivedAction(id: number, received: boolean): Promi
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("UPDATE fulfillments SET received=? WHERE id=?").run(received ? 1 : 0, id);
   revalidateAll();
   return ok(received ? "Barang ditandai diterima." : "Tanda diterima dibatalkan.");
@@ -352,7 +352,7 @@ export async function setPicAction(itemId: number, fulfillmentId: number): Promi
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   db.prepare("UPDATE fulfillments SET is_pic=0 WHERE item_id=?").run(itemId);
   db.prepare("UPDATE fulfillments SET is_pic=1 WHERE id=? AND item_id=?").run(fulfillmentId, itemId);
@@ -367,7 +367,7 @@ export async function deleteFulfillmentAction(id: number): Promise<ActionResult>
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("DELETE FROM fulfillments WHERE id=?").run(id);
   revalidateAll();
   return ok("Data barang dihapus.");
@@ -402,7 +402,7 @@ export async function addSurplusAction(_prev: unknown, formData: FormData): Prom
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb()
     .prepare(
       `INSERT INTO surplus (event_id,item_id,item_name,qty,qty_label,condition,decision,decision_note,pic_name,outcome,resolved_at)
@@ -427,7 +427,7 @@ export async function updateSurplusAction(_prev: unknown, formData: FormData): P
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb()
     .prepare("UPDATE surplus SET decision=?, decision_note=?, pic_name=?, outcome=?, resolved_at=? WHERE id=?")
     .run(decision, decisionNote, picName, outcome, outcome ? new Date().toISOString().slice(0, 19).replace("T", " ") : null, id);
@@ -442,7 +442,7 @@ export async function deleteSurplusAction(id: number): Promise<ActionResult> {
     revalidateAll();
     return r;
   }
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   getDb().prepare("DELETE FROM surplus WHERE id=?").run(id);
   revalidateAll();
   return ok("Catatan dihapus.");
@@ -471,7 +471,7 @@ export async function uploadPhotoAction(_prev: unknown, formData: FormData): Pro
     const { compressToWebp } = await import("./photo");
     const fs = await import("node:fs");
     const path = await import("node:path");
-    const { getDb } = await import("./db");
+    const { getDb } = await loadSqliteDb();
     const input = new Uint8Array(await file.arrayBuffer());
     const compressed = await compressToWebp(input);
     const uploadDir = path.join(process.cwd(), "data", "uploads");
@@ -494,7 +494,7 @@ export async function deletePhotoAction(id: number): Promise<ActionResult> {
     return r;
   }
 
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const fs = await import("node:fs");
   const path = await import("node:path");
   const db = getDb();

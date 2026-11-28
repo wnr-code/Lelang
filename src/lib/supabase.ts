@@ -39,6 +39,22 @@ export function getSupabase(): SupabaseClient {
   return cached;
 }
 
+/**
+ * Muat modul SQLite hanya di luar Cloudflare Worker.
+ * Di Worker, node:sqlite tidak tersedia — data harus dari Supabase.
+ * Pesan error dibuat jelas agar mudah dibaca di Workers Logs.
+ */
+export async function loadSqliteDb(): Promise<typeof import("./db")> {
+  if (typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers") {
+    throw new Error(
+      "Supabase belum dikonfigurasi di Worker: isi SUPABASE_SERVICE_ROLE_KEY (Secret) di " +
+        "Cloudflare Dashboard → Worker lelang → Settings → Variables and Secrets, lalu deploy ulang. " +
+        "Diagnosis: buka /api/health."
+    );
+  }
+  return import("./db");
+}
+
 /** Lemparkan error PostgREST/Storage dengan pesan yang terbaca. */
 export function throwIfError(error: { message: string } | null, context: string): void {
   if (error) throw new Error(`${context}: ${error.message}`);

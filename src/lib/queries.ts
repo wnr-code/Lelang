@@ -4,7 +4,7 @@
 //  - SQLite (node:sqlite) bila belum dikonfigurasi (preview lokal / sandbox).
 //    Modul SQLite di-import secara lazy agar tidak dievaluasi di Worker.
 // Semua fungsi async; pemanggil melakukan `await`.
-import { isSupabaseConfigured } from "./supabase";
+import { isSupabaseConfigured, loadSqliteDb } from "./supabase";
 import {
   sbGetActiveEvents,
   sbGetArchivedEvents,
@@ -37,7 +37,7 @@ export { deriveItemStatus, fmtQty };
 
 export async function getActiveEvents(): Promise<EventRow[]> {
   if (isSupabaseConfigured()) return sbGetActiveEvents();
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT * FROM events WHERE status = 'active' ORDER BY event_date IS NULL, event_date ASC, id DESC")
     .all() as unknown as EventRow[];
@@ -45,7 +45,7 @@ export async function getActiveEvents(): Promise<EventRow[]> {
 
 export async function getArchivedEvents(): Promise<EventRow[]> {
   if (isSupabaseConfigured()) return sbGetArchivedEvents();
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT * FROM events WHERE status IN ('completed','archived') ORDER BY completed_at DESC, event_date DESC")
     .all() as unknown as EventRow[];
@@ -53,7 +53,7 @@ export async function getArchivedEvents(): Promise<EventRow[]> {
 
 export async function getAllEvents(): Promise<EventRow[]> {
   if (isSupabaseConfigured()) return sbGetAllEvents();
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT * FROM events ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'draft' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, event_date DESC, id DESC")
     .all() as unknown as EventRow[];
@@ -61,19 +61,19 @@ export async function getAllEvents(): Promise<EventRow[]> {
 
 export async function getEventBySlug(slug: string): Promise<EventRow | undefined> {
   if (isSupabaseConfigured()) return sbGetEventBySlug(slug);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb().prepare("SELECT * FROM events WHERE slug = ?").get(slug) as unknown as EventRow | undefined;
 }
 
 export async function getEventById(id: number): Promise<EventRow | undefined> {
   if (isSupabaseConfigured()) return sbGetEventById(id);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb().prepare("SELECT * FROM events WHERE id = ?").get(id) as unknown as EventRow | undefined;
 }
 
 export async function getItemsWithStatus(eventId: number): Promise<ItemWithStatus[]> {
   if (isSupabaseConfigured()) return sbGetItemsWithStatus(eventId);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   const items = db
     .prepare("SELECT * FROM items WHERE event_id = ? ORDER BY sort_order ASC, id ASC")
@@ -89,13 +89,13 @@ export async function getItemsWithStatus(eventId: number): Promise<ItemWithStatu
 
 export async function getItemById(id: number): Promise<ItemRow | undefined> {
   if (isSupabaseConfigured()) return sbGetItemById(id);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb().prepare("SELECT * FROM items WHERE id = ?").get(id) as unknown as ItemRow | undefined;
 }
 
 export async function getFulfillments(itemId: number): Promise<FulfillmentRow[]> {
   if (isSupabaseConfigured()) return sbGetFulfillments(itemId);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT * FROM fulfillments WHERE item_id = ? ORDER BY is_pic DESC, id ASC")
     .all(itemId) as unknown as FulfillmentRow[];
@@ -103,7 +103,7 @@ export async function getFulfillments(itemId: number): Promise<FulfillmentRow[]>
 
 export async function getFulfillmentsForEvent(eventId: number): Promise<FulfillmentRow[]> {
   if (isSupabaseConfigured()) return sbGetFulfillmentsForEvent(eventId);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT f.* FROM fulfillments f JOIN items i ON i.id = f.item_id WHERE i.event_id = ? ORDER BY i.sort_order, f.id")
     .all(eventId) as unknown as FulfillmentRow[];
@@ -111,7 +111,7 @@ export async function getFulfillmentsForEvent(eventId: number): Promise<Fulfillm
 
 export async function getSubmissions(eventId?: number, status?: string): Promise<SubmissionJoined[]> {
   if (isSupabaseConfigured()) return sbGetSubmissions(eventId, status);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   const where: string[] = [];
   const params: Array<number | string> = [];
@@ -135,7 +135,7 @@ export async function getSubmissions(eventId?: number, status?: string): Promise
 
 export async function getSubmissionByCode(code: string): Promise<SubmissionTracked | undefined> {
   if (isSupabaseConfigured()) return sbGetSubmissionByCode(code);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare(
       `SELECT s.*, i.name AS item_name, i.target_label, i.unit, e.title AS event_title, e.slug AS event_slug, e.status AS event_status,
@@ -150,7 +150,7 @@ export async function getSubmissionByCode(code: string): Promise<SubmissionTrack
 
 export async function getSurplus(eventId: number): Promise<SurplusRow[]> {
   if (isSupabaseConfigured()) return sbGetSurplus(eventId);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT * FROM surplus WHERE event_id = ? ORDER BY id ASC")
     .all(eventId) as unknown as SurplusRow[];
@@ -158,7 +158,7 @@ export async function getSurplus(eventId: number): Promise<SurplusRow[]> {
 
 export async function getPhotos(eventId: number): Promise<PhotoRow[]> {
   if (isSupabaseConfigured()) return sbGetPhotos(eventId);
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare("SELECT * FROM photos WHERE event_id = ? ORDER BY id ASC")
     .all(eventId) as unknown as PhotoRow[];
@@ -176,7 +176,7 @@ export async function getDashboardCounts(): Promise<{
   unresolvedSurplus: number;
 }> {
   if (isSupabaseConfigured()) return sbGetDashboardCounts();
-  const { getDb } = await import("./db");
+  const { getDb } = await loadSqliteDb();
   const db = getDb();
   const pending = (db.prepare("SELECT COUNT(*) AS c FROM submissions WHERE status = 'pending'").get() as { c: number }).c;
   const active = (db.prepare("SELECT COUNT(*) AS c FROM events WHERE status = 'active'").get() as { c: number }).c;

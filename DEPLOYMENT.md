@@ -115,15 +115,22 @@ Anda sudah menetapkan domain kustom ke Worker. Bila belum aktif / perlu dicek:
 
 ## 5. Environment variables (produksi)
 
-Set via `wrangler secret put <NAMA>` (Jalur A) atau dashboard Workers → Settings → Variables
-(Jalur B). **Jangan** menulis nilai rahasia di `wrangler.jsonc` atau commit ke git.
+Set via `wrangler secret put <NAMA>` (Jalur A) atau dashboard Workers → **Settings →
+Variables and Secrets** (Jalur B — bagian *runtime*, **bukan** "Build variables").
+**Jangan** menulis nilai rahasia di `wrangler.jsonc` atau commit ke git.
 
 | Variabel | Wajib | Keterangan |
 | --- | --- | --- |
-| `PANITIA_PASSWORD` | ✅ | Kata sandi panitia. Ganti dari default! |
-| `SESSION_SECRET` | ✅ | String acak panjang untuk tanda tangan cookie sesi |
-| `SUPABASE_URL` | ✅ | `https://jxpjleqzpzrjbdrxxjgv.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase → Settings → API → `service_role` (RAHASIA, bypass RLS) |
+| `PANITIA_PASSWORD` | ✅ (Secret) | Kata sandi panitia. Ganti dari default! |
+| `SESSION_SECRET` | ✅ (Secret) | String acak panjang untuk tanda tangan cookie sesi |
+| `SUPABASE_URL` | sudah di `wrangler.jsonc` | `https://jxpjleqzpzrjbdrxxjgv.supabase.co` (URL publik, bukan rahasia) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ (Secret) | Supabase → Settings → API → `service_role` (RAHASIA, bypass RLS) |
+
+`wrangler.jsonc` sudah berisi `vars.SUPABASE_URL` dan `keep_vars: true`:
+- URL Supabase dijamin ada di runtime setiap deploy.
+- `keep_vars` menjaga variabel dashboard tidak terhapus saat `wrangler deploy`
+  (tanpa ini, deploy menghapus vars dashboard yang tidak tertulis di file config).
+- Secrets tidak pernah dihapus oleh deploy.
 
 Buat secret kuat:
 ```bash
@@ -131,7 +138,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 > Tanpa `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`, aplikasi jatuh ke mode SQLite — yang **tidak**
-> berfungsi di Worker (filesystem read-only). Jadi keempat variabel di atas wajib diisi di produksi.
+> berfungsi di Worker. Sejak perbaikan ini, aplikasi menampilkan pesan error yang jelas di
+> Workers Logs (bukan error modul misterius).
+
+**Diagnosis cepat:** buka `https://lelang.cgs.my.id/api/health` — menampilkan status
+ada/tidaknya tiap variabel (tanpa nilainya) + hasil koneksi Supabase. `ready: true` = siap.
 
 Untuk **preview lokal** (`npm run preview`, wrangler dev): salin `.dev.vars.example` → `.dev.vars`
 dan isi nilainya. File `.dev.vars` di-ignore git.
