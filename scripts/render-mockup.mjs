@@ -105,5 +105,9 @@ ${out}
 <text x="720" y="962" font-family="sans-serif" font-size="12" fill="${MUT}" text-anchor="middle">Infaq dana dikelola panitia menjadi sembako · nominal tidak dipublikasikan · kontak pengurus via WhatsApp</text>
 </svg>`;
 
-await sharp(Buffer.from(svg)).png().toFile("public/mockup.png");
-console.log("mockup.png rendered");
+const base = await sharp(Buffer.from(svg)).png().toBuffer();
+// Tempel logo asli Cigatas di tiap kepala layar (menggantikan placeholder).
+const logo = await sharp("public/images/logo-cigatas.webp").resize(34, 34, { fit: "inside" }).png().toBuffer();
+const marks = [60, 530, 1000].map((px) => ({ input: logo, left: px + 27, top: 175 }));
+await sharp(base).composite(marks).png().toFile("public/mockup.png");
+console.log("mockup.png rendered (with logo)");
