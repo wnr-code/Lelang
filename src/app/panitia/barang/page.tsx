@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PackageCheck } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
-import { getAllEvents, getItemsWithStatus, getFulfillments, getEventProgress } from "@/lib/queries";
+import { getAllEvents, getItemsWithStatus, getFulfillmentsWithContact, getEventProgress } from "@/lib/queries";
 import { GoodsItemCard } from "@/components/panitia-goods";
 import { EmptyState, ProgressBar } from "@/components/ui";
 
@@ -38,17 +38,17 @@ export default async function BarangPage({ searchParams }: { searchParams: Promi
       {!selected ? (
         <EmptyState icon={<PackageCheck className="h-10 w-10" />} title="Belum ada kegiatan" subtitle="Buat kegiatan dulu di menu Kelola Kegiatan." />
       ) : (
-        <GoodsView eventId={selected.id} />
+        <GoodsView eventId={selected.id} eventTitle={selected.title} />
       )}
     </div>
   );
 }
 
-async function GoodsView({ eventId }: { eventId: number }) {
+async function GoodsView({ eventId, eventTitle }: { eventId: number; eventTitle: string }) {
   const items = await getItemsWithStatus(eventId);
   const progress = await getEventProgress(eventId);
   const itemFuls = await Promise.all(
-    items.map(async (item) => ({ item, fulfillments: await getFulfillments(item.id) }))
+    items.map(async (item) => ({ item, fulfillments: await getFulfillmentsWithContact(item.id) }))
   );
 
   return (
@@ -62,7 +62,7 @@ async function GoodsView({ eventId }: { eventId: number }) {
       </div>
       <div className="space-y-3">
         {itemFuls.map(({ item, fulfillments }) => (
-          <GoodsItemCard key={item.id} item={item} fulfillments={fulfillments} />
+          <GoodsItemCard key={item.id} item={item} fulfillments={fulfillments} eventTitle={eventTitle} />
         ))}
         {items.length === 0 && (
           <EmptyState title="Belum ada item kebutuhan" subtitle="Tambahkan kebutuhan di menu Kelola Kegiatan." />

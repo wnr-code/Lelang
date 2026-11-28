@@ -108,6 +108,13 @@ export interface FulfillmentRow {
   created_at: string;
 }
 
+/** Pemenuhan diperkaya kontak dari pengajuan terkait (untuk follow-up WA panitia). */
+export interface FulfillmentWithContact extends FulfillmentRow {
+  contact: string;
+  track_code: string;
+  submission_status: SubmissionStatus | null;
+}
+
 export interface SurplusRow {
   id: number;
   event_id: number;

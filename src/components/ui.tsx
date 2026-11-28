@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { UserRound } from "lucide-react";
+import { UserRound, Check, PackageCheck } from "lucide-react";
 import { NotifBell } from "@/components/notif-bell";
 import { FooterLeaves } from "@/components/footer-leaves";
 import type { ItemStatus, SubmissionStatus } from "@/lib/types";
@@ -82,12 +82,18 @@ export function ItemStatusChip({ status }: { status: ItemStatus }) {
 export function SubmissionStatusChip({ status }: { status: SubmissionStatus }) {
   const cls: Record<SubmissionStatus, string> = {
     pending: "bg-amber-100 text-amber-800",
-    approved: "bg-emerald-100 text-emerald-800",
+    approved: "bg-teal-100 text-teal-800",
     needs_confirmation: "bg-sky-100 text-sky-800",
     rejected: "bg-rose-100 text-rose-700",
     done: "bg-emerald-600 text-white",
   };
-  return <span className={`chip ${cls[status] ?? cls.pending}`}>{SUBMISSION_STATUS_LABEL[status] ?? "Menunggu konfirmasi"}</span>;
+  return (
+    <span className={`chip ${cls[status] ?? cls.pending}`}>
+      {status === "approved" && <Check className="h-3 w-3" />}
+      {status === "done" && <PackageCheck className="h-3 w-3" />}
+      {SUBMISSION_STATUS_LABEL[status] ?? "Menunggu konfirmasi"}
+    </span>
+  );
 }
 
 export function ProposalStatusChip({ status }: { status: ProposalStatus }) {

@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, MessageSquare, Phone, Clock3, HelpCircle, CheckCheck, Package, HandHeart } from "lucide-react";
+import { Check, X, MessageSquare, Phone, Clock3, HelpCircle, CheckCheck, Package, HandHeart, MessageCircle, PackageCheck } from "lucide-react";
 import { decideSubmissionAction } from "@/lib/actions";
 import { SubmissionStatusChip } from "@/components/ui";
-import { SUBMISSION_STATUS_LABEL } from "@/lib/types";
+import { waFollowUp, followUpMessage } from "@/lib/wa";
 import type { SubmissionRow, SubmissionStatus } from "@/lib/types";
 
 type SubWithMeta = SubmissionRow & { item_name: string; event_title: string; event_slug: string; item_kind?: string };
@@ -17,12 +17,6 @@ const ACTIONS: Record<SubmissionStatus, SubmissionStatus[]> = {
   rejected: ["approved"],
   done: [],
 };
-
-function waLink(contact: string): string {
-  const digits = contact.replace(/\D/g, "");
-  const intl = digits.startsWith("0") ? "62" + digits.slice(1) : digits;
-  return `https://wa.me/${intl}`;
-}
 
 export function SubmissionCard({ sub }: { sub: SubWithMeta }) {
   const [note, setNote] = useState("");
@@ -75,14 +69,31 @@ export function SubmissionCard({ sub }: { sub: SubWithMeta }) {
         </p>
       )}
       {sub.contact && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-500">
             <Phone className="h-3.5 w-3.5" /> {sub.contact}
           </span>
-          <a href={waLink(sub.contact)} target="_blank" rel="noopener" className="chip bg-emerald-600 text-white">
-            Hubungi WhatsApp
+          <a
+            href={waFollowUp(sub.contact, followUpMessage({ name: sub.nickname, itemName: sub.item_name, qty: sub.qty_label || (sub.unit ? `satuan ${sub.unit}` : ""), eventTitle: sub.event_title, purpose: "pengajuan" }))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chip bg-emerald-600 text-white"
+          >
+            <MessageCircle className="h-3 w-3" /> Follow Up WhatsApp
           </a>
         </div>
+      )}
+
+      {/* Penanda tegas: disetujui ≠ diterima fisik */}
+      {sub.status === "approved" && (
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">
+          <Clock3 className="h-3.5 w-3.5" /> Disetujui — belum diterima fisik
+        </p>
+      )}
+      {sub.status === "done" && (
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">
+          <PackageCheck className="h-3.5 w-3.5" /> Sudah diterima fisik — terverifikasi panitia
+        </p>
       )}
       {sub.decision_note && sub.status !== "pending" && (
         <p className="mt-2 rounded-lg bg-stone-50 px-3 py-2 text-xs italic text-stone-500">Catatan: “{sub.decision_note}”</p>
@@ -134,11 +145,6 @@ export function SubmissionCard({ sub }: { sub: SubWithMeta }) {
         </div>
       )}
 
-      {sub.status === "done" && (
-        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-800">
-          {SUBMISSION_STATUS_LABEL.done}: bantuan sudah diverifikasi panitia dan tercatat diterima.
-        </p>
-      )}
     </div>
   );
 }

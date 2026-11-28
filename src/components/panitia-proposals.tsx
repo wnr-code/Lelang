@@ -6,6 +6,7 @@ import { Lightbulb, Check, X, Pencil, MessageCircle, Loader2 } from "lucide-reac
 import { decideProposalAction, updateProposalAction } from "@/lib/actions";
 import { ProposalStatusChip, Avatar, formatDate } from "@/components/ui";
 import { ITEM_CATEGORY_LABEL, ITEM_CATEGORY_ORDER, UNIT_OPTIONS } from "@/lib/types";
+import { waFollowUp, followUpMessage } from "@/lib/wa";
 import type { ProposalJoined } from "@/lib/queries";
 
 /** Panel admin: tinjau usulan item baru — setujui (jadi kebutuhan resmi), tolak, atau ubah. */
@@ -73,8 +74,6 @@ function ProposalCard({ p }: { p: ProposalJoined }) {
     run(() => updateProposalAction(null, fd).then((r) => { if (r.ok) setEditing(false); return r; }));
   }
 
-  const waDigits = p.contact.replace(/\D/g, "");
-
   return (
     <div className="card px-5 py-4">
       <div className="flex items-start gap-3">
@@ -92,8 +91,13 @@ function ProposalCard({ p }: { p: ProposalJoined }) {
           </p>
           {p.note && <p className="mt-1 text-[12px] italic leading-relaxed text-stone-500">“{p.note}”</p>}
           {p.contact && (
-            <a href={`https://wa.me/${waDigits.startsWith("0") ? "62" + waDigits.slice(1) : waDigits}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-bold text-emerald-700">
-              <MessageCircle className="h-3.5 w-3.5" /> {p.contact}
+            <a
+              href={waFollowUp(p.contact, followUpMessage({ name: p.nickname, itemName: p.name, qty: p.qty_label || (p.qty != null ? `${p.qty}${p.unit ? " " + p.unit : ""}` : ""), eventTitle: p.event_title, purpose: "usulan" }))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-[12px] font-bold text-emerald-700 hover:underline"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Follow Up WA · {p.contact}
             </a>
           )}
         </div>
