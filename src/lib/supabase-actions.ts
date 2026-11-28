@@ -332,9 +332,11 @@ export async function sbUploadPhoto(eventId: number, caption: string, fileBytes:
     const webp = await compressToWebp(fileBytes);
     const sb = getSupabase();
     const objectPath = `${eventId}/${Date.now()}-${Math.random().toString(16).slice(2, 10)}.webp`;
+    const buf = webp.buffer.slice(webp.byteOffset, webp.byteOffset + webp.byteLength) as ArrayBuffer;
+    const blob = new Blob([buf], { type: "image/webp" });
     const { error: upErr } = await sb.storage
       .from(PHOTO_BUCKET)
-      .upload(objectPath, webp, { contentType: "image/webp", upsert: true });
+      .upload(objectPath, blob, { contentType: "image/webp", upsert: true });
     throwIfError(upErr, "uploadPhoto(storage)");
     const { data: pub } = sb.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath);
     const { error: insErr } = await sb
@@ -343,7 +345,15 @@ export async function sbUploadPhoto(eventId: number, caption: string, fileBytes:
     throwIfError(insErr, "uploadPhoto(db)");
     return ok(`Foto diupload & dikompres otomatis (${Math.round(webp.length / 1024)} KB).`);
   } catch (e) {
-    return fail("Gagal memproses foto. Pastikan file gambar valid.");
+    console.error("uploadPhoto", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/unsupported|mime|format|decode|invalid|signature/i.test(msg)) {
+      return fail("Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.");
+    }
+    if (/size|large|payload|entity|too big/i.test(msg)) {
+      return fail("Foto terlalu besar. Maksimal 15 MB.");
+    }
+    return fail("Gagal memproses foto. Coba lagi dengan foto JPG/PNG/WebP yang lebih kecil.");
   }
 }
 

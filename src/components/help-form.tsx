@@ -86,7 +86,7 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
       <div className="space-y-3">
         <div>
           <label className="label" htmlFor={`nickname-${item.id}`}>Nama panggilan</label>
-          <input id={`nickname-${item.id}`} name="nickname" required maxLength={40} placeholder="mis. Kang Asep" className="input" />
+          <input id={`nickname-${item.id}`} name="nickname" required maxLength={80} placeholder="mis. Kang Asep" className="input" />
         </div>
         <div>
           <label className="label" htmlFor={`qty-${item.id}`}>
@@ -95,17 +95,17 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
           {hasNumericTarget ? (
             <input id={`qty-${item.id}`} name="qty" type="number" min="0.1" step="any" required placeholder={item.unit ? `mis. 5 ${item.unit}` : "mis. 5"} className="input" />
           ) : (
-            <input id={`qty-${item.id}`} name="qty_label" required maxLength={40} placeholder="mis. 2 dus / secukupnya" className="input" />
+            <input id={`qty-${item.id}`} name="qty_label" required maxLength={80} placeholder="mis. 2 dus / secukupnya" className="input" />
           )}
           <p className="mt-1 text-[11px] text-stone-400">Target: {item.target_label}. Tidak harus penuh — sekecil apa pun berarti.</p>
         </div>
         <div>
           <label className="label" htmlFor={`message-${item.id}`}>Pesan untuk panitia (opsional)</label>
-          <textarea id={`message-${item.id}`} name="message" maxLength={300} rows={2} placeholder="mis. Siap diantar Sabtu sore" className="input resize-none" />
+          <textarea id={`message-${item.id}`} name="message" maxLength={2000} rows={2} placeholder="mis. Siap diantar Sabtu sore" className="input resize-none" />
         </div>
         <div>
           <label className="label" htmlFor={`contact-${item.id}`}>Kontak WA (opsional)</label>
-          <input id={`contact-${item.id}`} name="contact" maxLength={60} placeholder="mis. 0812xxxx (hanya untuk panitia)" className="input" />
+          <input id={`contact-${item.id}`} name="contact" maxLength={80} placeholder="mis. 0812xxxx (hanya untuk panitia)" className="input" />
         </div>
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
         <button type="submit" disabled={pending} className="btn-primary w-full">

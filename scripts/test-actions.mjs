@@ -46,13 +46,15 @@ check("createEvent tanpa login ditolak", r.ok === false);
 try { await A.loginAction(null, fd({ password: "cigatas-berbagi" })); } catch {}
 
 console.log("== Publik: ajukan bantuan ==");
-r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "Teh Uji", qty: 15, message: "snack 15 bungkus" }));
+const longMessage = "snack 15 bungkus. " + "A".repeat(1500);
+r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "Teh Uji", qty: 15, message: longMessage }));
 check("submit berhasil", r.ok === true);
 check("dapat kode lacak", /^CGT-/.test(r.code || ""));
 const subCode = r.code;
 const tracked = await Q.getSubmissionByCode(subCode);
 check("lacak: status pending", tracked.status === "pending");
 check("lacak: item benar", tracked.item_name === "Snack Anak");
+check("pesan panjang tersimpan (>1000)", tracked.message.length > 1000);
 
 console.log("== Panitia: setujui pengajuan ==");
 r = await A.decideSubmissionAction(tracked.id, "approved", "Silakan antar ke balai warga.");
@@ -80,9 +82,11 @@ if (pendingAir) {
 }
 
 console.log("== Panitia: buat kegiatan baru + item ==");
-r = await A.createEventAction(null, fd({ title: "Kerja Bakti Cigatas", description: "Bersih-bersih", event_date: "2026-12-01", location: "Balai Warga" }));
+const longDesc = "Bersih-bersih. " + "B".repeat(3000);
+r = await A.createEventAction(null, fd({ title: "Kerja Bakti Cigatas", description: longDesc, event_date: "2026-12-01", location: "Balai Warga" }));
 check("create event berhasil", r.ok === true);
 const newEventId = r.id;
+check("deskripsi panjang tersimpan (>3000)", (await Q.getEventById(newEventId)).description.length > 3000);
 r = await A.addItemAction(null, fd({ event_id: newEventId, name: "Sapu", target_label: "10 Buah", unit: "Buah" }));
 check("add item berhasil", r.ok === true);
 const newItems = await Q.getItemsWithStatus(newEventId);
@@ -131,6 +135,19 @@ check("file fisik ada", fs.existsSync(fpath));
 const meta = await sharp(fpath).metadata();
 check("terkompres ≤1600px", meta.width <= 1600);
 check("format webp", meta.format === "webp");
+
+console.log("== Upload foto besar (>1 MB) ==");
+const { randomBytes } = await import("node:crypto");
+const raw = randomBytes(2000 * 2000 * 3);
+const bigBuf = await sharp(raw, { raw: { width: 2000, height: 2000, channels: 3 } }).jpeg({ quality: 95 }).toBuffer();
+check("foto uji >1 MB", bigBuf.length > 1024 * 1024);
+const bigFile = new File([bigBuf], "besar.jpg", { type: "image/jpeg" });
+const fdBig = new FormData();
+fdBig.set("event_id", "1");
+fdBig.set("caption", "Foto besar");
+fdBig.set("photo", bigFile);
+r = await A.uploadPhotoAction(null, fdBig);
+check("upload foto >1 MB berhasil", r.ok === true);
 
 console.log("== Validasi input ==");
 r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "", qty: 5 }));
