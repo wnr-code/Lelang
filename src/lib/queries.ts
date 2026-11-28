@@ -124,12 +124,12 @@ export async function getSubmissions(eventId?: number, status?: string): Promise
     params.push(status);
   }
   const sql = `
-    SELECT s.*, i.name AS item_name, e.title AS event_title, e.slug AS event_slug
+    SELECT s.*, i.name AS item_name, i.kind AS item_kind, e.title AS event_title, e.slug AS event_slug
     FROM submissions s
     JOIN items i ON i.id = s.item_id
     JOIN events e ON e.id = s.event_id
     ${where.length ? "WHERE " + where.join(" AND ") : ""}
-    ORDER BY CASE s.status WHEN 'pending' THEN 0 ELSE 1 END, s.created_at DESC, s.id DESC`;
+    ORDER BY CASE s.status WHEN 'pending' THEN 0 WHEN 'needs_confirmation' THEN 1 ELSE 2 END, s.created_at DESC, s.id DESC`;
   return db.prepare(sql).all(...params) as unknown as SubmissionJoined[];
 }
 
@@ -138,7 +138,7 @@ export async function getSubmissionByCode(code: string): Promise<SubmissionTrack
   const { getDb } = await loadSqliteDb();
   return getDb()
     .prepare(
-      `SELECT s.*, i.name AS item_name, i.target_label, i.unit, e.title AS event_title, e.slug AS event_slug, e.status AS event_status,
+      `SELECT s.*, i.name AS item_name, i.kind AS item_kind, i.target_label, i.unit AS item_unit, e.title AS event_title, e.slug AS event_slug, e.status AS event_status,
               COALESCE((SELECT person_name FROM fulfillments f WHERE f.submission_id = s.id AND f.is_pic = 1 LIMIT 1), '') AS pic_name
        FROM submissions s
        JOIN items i ON i.id = s.item_id

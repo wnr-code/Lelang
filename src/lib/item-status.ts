@@ -42,20 +42,30 @@ export function computeItemsWithStatus(
     const subs = subByItem.get(item.id) ?? [];
     let receivedQty = 0;
     let picName = "";
+    let receivedAt: string | null = null;
     for (const f of fuls) {
-      if (f.received) receivedQty += f.qty ?? 0;
+      if (f.received) {
+        receivedQty += f.qty ?? 0;
+        const ts = f.received_at ?? f.created_at;
+        if (!receivedAt || ts > receivedAt) receivedAt = ts;
+      }
       if (f.is_pic && f.person_name) picName = f.person_name;
     }
-    const approvedCount = subs.filter((s) => s.status === "approved").length;
-    const pendingCount = subs.filter((s) => s.status === "pending").length;
+    const approvedSubs = subs.filter((s) => s.status === "approved" || s.status === "done");
+    const approvedCount = approvedSubs.length;
+    const approvedQty = approvedSubs.reduce((a, s) => a + (s.qty ?? 0), 0);
+    const pendingCount = subs.filter((s) => s.status === "pending" || s.status === "needs_confirmation").length;
     const unit = item.unit ? ` ${item.unit}` : "";
     return {
       ...item,
       received_qty: receivedQty,
       received_label: receivedQty > 0 ? `${fmtQty(receivedQty)}${unit}` : "",
+      submitted_count: subs.length,
       approved_count: approvedCount,
+      approved_qty: approvedQty,
       pending_count: pendingCount,
       pic_name: picName,
+      received_at: receivedAt,
       status: deriveItemStatus(item, receivedQty, approvedCount),
     };
   });

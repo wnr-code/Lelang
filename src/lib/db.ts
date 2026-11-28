@@ -35,6 +35,87 @@ export function getDb(): DatabaseSync {
   return db;
 }
 
+const SCHEMA_VERSION = 2;
+
+function submissionsDDL(name: string): string {
+  return `CREATE TABLE IF NOT EXISTS ${name} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    nickname TEXT NOT NULL,
+    qty REAL,
+    qty_label TEXT NOT NULL DEFAULT '',
+    unit TEXT NOT NULL DEFAULT '',
+    availability TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    contact TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','needs_confirmation','rejected','done')),
+    track_code TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    decided_at TEXT,
+    decision_note TEXT NOT NULL DEFAULT ''
+  );`;
+}
+
+function surplusDDL(name: string): string {
+  return `CREATE TABLE IF NOT EXISTS ${name} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+    item_name TEXT NOT NULL,
+    qty REAL,
+    qty_label TEXT NOT NULL DEFAULT '',
+    condition TEXT NOT NULL DEFAULT 'sisa' CHECK (condition IN ('sisa','berlebih')),
+    decision TEXT NOT NULL DEFAULT 'disimpan' CHECK (decision IN ('disimpan','kegiatan_berikutnya','ditukar','dijual','disalurkan','didonasikan','lainnya')),
+    decision_note TEXT NOT NULL DEFAULT '',
+    pic_name TEXT NOT NULL DEFAULT '',
+    outcome TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT
+  );`;
+}
+
+function tableColumns(db: DatabaseSync, table: string): Set<string> {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  return new Set(rows.map((r) => r.name));
+}
+
+function addColumn(db: DatabaseSync, table: string, name: string, ddl: string) {
+  if (!tableColumns(db, table).has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`);
+}
+
+/** Bangun ulang tabel lama agar CHECK status/decision yang baru ikut berlaku. */
+function rebuild(db: DatabaseSync, table: string, ddl: (n: string) => string, marker: string) {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(table) as
+    | { sql: string }
+    | undefined;
+  if (!row || row.sql.includes(marker)) return;
+  const cols = [...tableColumns(db, table)].join(", ");
+  db.exec("PRAGMA foreign_keys=OFF");
+  db.exec(ddl(`${table}_new`));
+  db.exec(`INSERT INTO ${table}_new (${cols}) SELECT ${cols} FROM ${table}`);
+  db.exec(`DROP TABLE ${table}`);
+  db.exec(`ALTER TABLE ${table}_new RENAME TO ${table}`);
+  db.exec("PRAGMA foreign_keys=ON");
+}
+
+/** Migrasi berkas SQLite lama (preview lokal) ke skema barang/tenaga + status baru. */
+function upgrade(db: DatabaseSync) {
+  const v = (db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
+  if (v >= SCHEMA_VERSION) return;
+  addColumn(db, "items", "kind", "TEXT NOT NULL DEFAULT 'barang'");
+  addColumn(db, "submissions", "unit", "TEXT NOT NULL DEFAULT ''");
+  addColumn(db, "submissions", "availability", "TEXT NOT NULL DEFAULT ''");
+  addColumn(db, "fulfillments", "received_at", "TEXT");
+  rebuild(db, "submissions", submissionsDDL, "needs_confirmation");
+  rebuild(db, "surplus", surplusDDL, "disalurkan");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_submissions_event ON submissions(event_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_submissions_item ON submissions(item_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_surplus_event ON surplus(event_id)");
+  db.exec("UPDATE fulfillments SET received_at = created_at WHERE received = 1 AND received_at IS NULL");
+  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+}
+
 function migrate(db: DatabaseSync) {
   db.exec(`
   CREATE TABLE IF NOT EXISTS events (
@@ -53,6 +134,7 @@ function migrate(db: DatabaseSync) {
   CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL DEFAULT 'barang' CHECK (kind IN ('barang','tenaga')),
     name TEXT NOT NULL,
     target_qty REAL,
     target_label TEXT NOT NULL,
@@ -63,21 +145,7 @@ function migrate(db: DatabaseSync) {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS submissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-    nickname TEXT NOT NULL,
-    qty REAL,
-    qty_label TEXT NOT NULL DEFAULT '',
-    message TEXT NOT NULL DEFAULT '',
-    contact TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
-    track_code TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    decided_at TEXT,
-    decision_note TEXT NOT NULL DEFAULT ''
-  );
+  ${submissionsDDL("submissions")}
 
   CREATE TABLE IF NOT EXISTS fulfillments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,25 +156,12 @@ function migrate(db: DatabaseSync) {
     qty_label TEXT NOT NULL DEFAULT '',
     is_pic INTEGER NOT NULL DEFAULT 0,
     received INTEGER NOT NULL DEFAULT 0,
+    received_at TEXT,
     note TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS surplus (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
-    item_name TEXT NOT NULL,
-    qty REAL,
-    qty_label TEXT NOT NULL DEFAULT '',
-    condition TEXT NOT NULL DEFAULT 'sisa' CHECK (condition IN ('sisa','berlebih')),
-    decision TEXT NOT NULL DEFAULT 'disimpan' CHECK (decision IN ('disimpan','kegiatan_berikutnya','ditukar','dijual','didonasikan','lainnya')),
-    decision_note TEXT NOT NULL DEFAULT '',
-    pic_name TEXT NOT NULL DEFAULT '',
-    outcome TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    resolved_at TEXT
-  );
+  ${surplusDDL("surplus")}
 
   CREATE TABLE IF NOT EXISTS photos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,6 +179,8 @@ function migrate(db: DatabaseSync) {
   CREATE INDEX IF NOT EXISTS idx_photos_event ON photos(event_id);
   `);
 
+  upgrade(db);
+
   const count = db.prepare("SELECT COUNT(*) AS c FROM events").get() as { c: number };
   if (count.c === 0) seed(db);
 }
@@ -134,7 +191,7 @@ function seed(db: DatabaseSync) {
      VALUES (?,?,?,?,?,?,?,?)`
   );
   const insItem = db.prepare(
-    `INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,is_open) VALUES (?,?,?,?,?,?,?,?)`
+    `INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,is_open,kind) VALUES (?,?,?,?,?,?,?,?,?)`
   );
   const insSub = db.prepare(
     `INSERT INTO submissions (event_id,item_id,nickname,qty,qty_label,message,contact,status,track_code,decided_at,decision_note)
@@ -176,8 +233,23 @@ function seed(db: DatabaseSync) {
   ];
   const itemIds: number[] = [];
   for (const [name, qty, label, unit, note, order] of items) {
-    itemIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1).lastInsertRowid));
+    itemIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1, "barang").lastInsertRowid));
   }
+
+  // Kebutuhan tenaga (bantuan non-barang) untuk kegiatan aktif.
+  const tenaga: Array<[string, number | null, string, string, string, number]> = [
+    ["Tenaga Masak (Dapur Umum)", 6, "6 Orang", "Orang", "Membantu memasak konsumsi untuk tamu.", 90],
+    ["Tenaga Bongkar & Angkut", 4, "4 Orang", "Orang", "Menyiapkan dan menata barang di lokasi.", 91],
+    ["Tenaga Kebersihan", 3, "3 Orang", "Orang", "Merapikan lokasi sebelum dan sesudah acara.", 92],
+  ];
+  const tenagaIds: number[] = [];
+  for (const [name, qty, label, unit, note, order] of tenaga) {
+    tenagaIds.push(Number(insItem.run(eid, name, qty, label, unit, note, order, 1, "tenaga").lastInsertRowid));
+  }
+  db.prepare(
+    `INSERT INTO submissions (event_id,item_id,nickname,qty,qty_label,unit,availability,message,contact,status,track_code)
+     VALUES (?,?,?,?,?,?,?,?,?,'pending',?)`
+  ).run(eid, tenagaIds[0], "Mas Ridwan", 1, "1 Orang", "Orang", "Sabtu, 07.00–12.00 WIB", "Siap bantu masak dari pagi.", "", "CGT-TENAGA-01");
 
   // Beras & Kopi sudah terpenuhi
   const s1 = insSub.run(eid, itemIds[0], "Kang Asep", 40, "40 Kg", "Beras dari rumah, siap diantar Sabtu.", "", "approved", "CGT-BERAS-01", now(), "Silakan antar ke balai warga, terima kasih!").lastInsertRowid;
@@ -220,7 +292,7 @@ function seed(db: DatabaseSync) {
   const pItemIds: number[] = [];
   for (let i = 0; i < pItems.length; i++) {
     const [name, qty, label, unit] = pItems[i];
-    pItemIds.push(Number(insItem.run(pid, name, qty, label, unit, "", i, 0).lastInsertRowid));
+    pItemIds.push(Number(insItem.run(pid, name, qty, label, unit, "", i, 0, "barang").lastInsertRowid));
   }
   const ps1 = insSub.run(pid, pItemIds[0], "Kang Asep", 32, "32 Kg", "Beras lebih dari target, tidak apa-apa.", "", "approved", "CGT-HB-BERAS", "2025-04-10 09:00:00", "Alhamdulillah, terima kasih.").lastInsertRowid;
   insFul.run(pItemIds[0], Number(ps1), "Kang Asep", 32, "32 Kg", 1, 1, "Diterima penuh.");
@@ -235,6 +307,9 @@ function seed(db: DatabaseSync) {
   insSurplus.run(pid, pItemIds[1], "Kopi", 1, "1 Dus", "sisa", "kegiatan_berikutnya", "Masih tersegel.", "Teh Nisa", "Dialokasikan untuk pengajian bulan depan.", "2025-04-14 10:00:00");
   insSurplus.run(pid, pItemIds[2], "Air Mineral", 2, "2 Dus", "sisa", "ditukar", "Ditukar dengan gula pasir di warung.", "Mang Ujang", "Ditukar 2 dus air dengan 3 kg gula pasir.", "2025-04-14 10:00:00");
   insSurplus.run(pid, pItemIds[3], "Kue Kering", 3, "3 Toples", "berlebih", "didonasikan", "Masih layak konsumsi.", "Bu Ratna", "Didonasikan ke panti asuhan Al-Ikhlas.", "2025-04-14 10:00:00");
+
+  // Tanggal penerimaan diisi untuk barang yang sudah diterima.
+  db.exec("UPDATE fulfillments SET received_at = created_at WHERE received = 1 AND received_at IS NULL");
 
   insPhoto.run(pid, "/images/arsip-1.webp", "Silaturahmi warga saat halal bihalal.");
   insPhoto.run(pid, "/images/arsip-2.webp", "Hasil gotong royong kebutuhan acara.");

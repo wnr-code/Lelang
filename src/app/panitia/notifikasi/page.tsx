@@ -11,7 +11,8 @@ export const metadata = { title: "Notifikasi" };
 
 export default async function NotifikasiPage() {
   if (!(await isPanitia())) redirect("/panitia/login");
-  const pending = await getSubmissions(undefined, "pending");
+  const all = await getSubmissions(undefined, "all");
+  const pending = all.filter((s) => s.status === "pending" || s.status === "needs_confirmation");
   const counts = await getDashboardCounts();
   const nextRoutine = nextMalamJumatKe4();
 
@@ -31,8 +32,8 @@ export default async function NotifikasiPage() {
         <Link href="/panitia/pengajuan" className="card flex items-center gap-4 px-5 py-4 transition hover:shadow-md">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Inbox className="h-5 w-5" /></span>
           <div className="flex-1">
-            <p className="text-sm font-extrabold text-ink">{counts.pending} pengajuan menunggu keputusan</p>
-            <p className="text-xs text-stone-400">Tinjau & setujui bantuan anggota.</p>
+            <p className="text-sm font-extrabold text-ink">{pending.length} pengajuan perlu ditinjau</p>
+            <p className="text-xs text-stone-400">Menunggu konfirmasi & perlu konfirmasi.</p>
           </div>
           <ArrowRight className="h-4 w-4 text-stone-300" />
         </Link>

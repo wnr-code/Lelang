@@ -187,6 +187,11 @@ fungsi yang diminta. Ukuran ini normal untuk aplikasi Next.js + OpenNext dengan 
 
 ## 8. Supabase (sudah siap)
 
+- Migrasi terbaru: `supabase/migrations/20261128_barang_tenaga_status.sql` (sudah diterapkan ke proyek asli)
+  menambah `items.kind` (barang/tenaga), `submissions.unit` & `submissions.availability`,
+  `fulfillments.received_at`, status pengajuan 5 tahap (pending/approved/needs_confirmation/rejected/done),
+  dan pilihan sisa barang `disalurkan`. Untuk proyek baru cukup jalankan `schema.sql` terbaru.
+
 - Skema: `supabase/schema.sql` — 6 tabel (events, items, submissions, fulfillments, surplus, photos),
   RLS aktif, akses server via service-role (bypass RLS).
 - Seed: `supabase/seed.sql` — 2 kegiatan, 12 item, 11 pengajuan, 9 pemenuhan, 4 sisa, 2 foto.

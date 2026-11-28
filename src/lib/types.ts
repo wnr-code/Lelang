@@ -1,5 +1,6 @@
 export type EventStatus = "draft" | "active" | "completed" | "archived";
-export type SubmissionStatus = "pending" | "approved" | "rejected";
+export type SubmissionStatus = "pending" | "approved" | "needs_confirmation" | "rejected" | "done";
+export type ItemKind = "barang" | "tenaga";
 export type ItemStatus = "open" | "process" | "fulfilled";
 export type SurplusCondition = "sisa" | "berlebih";
 export type SurplusDecision =
@@ -7,6 +8,7 @@ export type SurplusDecision =
   | "kegiatan_berikutnya"
   | "ditukar"
   | "dijual"
+  | "disalurkan"
   | "didonasikan"
   | "lainnya";
 
@@ -26,6 +28,7 @@ export interface EventRow {
 export interface ItemRow {
   id: number;
   event_id: number;
+  kind: ItemKind;
   name: string;
   target_qty: number | null;
   target_label: string;
@@ -43,6 +46,8 @@ export interface SubmissionRow {
   nickname: string;
   qty: number | null;
   qty_label: string;
+  unit: string;
+  availability: string;
   message: string;
   contact: string;
   status: SubmissionStatus;
@@ -61,6 +66,7 @@ export interface FulfillmentRow {
   qty_label: string;
   is_pic: number;
   received: number;
+  received_at: string | null;
   note: string;
   created_at: string;
 }
@@ -92,9 +98,12 @@ export interface PhotoRow {
 export interface ItemWithStatus extends ItemRow {
   received_qty: number;
   received_label: string;
+  submitted_count: number;
   approved_count: number;
+  approved_qty: number;
   pending_count: number;
   pic_name: string;
+  received_at: string | null;
   status: ItemStatus;
 }
 
@@ -104,14 +113,43 @@ export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
   fulfilled: "Terpenuhi",
 };
 
+export const SUBMISSION_STATUS_LABEL: Record<SubmissionStatus, string> = {
+  pending: "Menunggu konfirmasi",
+  approved: "Disetujui",
+  needs_confirmation: "Perlu konfirmasi",
+  rejected: "Ditolak",
+  done: "Selesai",
+};
+
+/** Status yang boleh dipilih panitia saat meninjau pengajuan. */
+export const SUBMISSION_DECISIONS: SubmissionStatus[] = ["approved", "needs_confirmation", "rejected", "done"];
+
+export const ITEM_KIND_LABEL: Record<ItemKind, string> = {
+  barang: "Barang / Sembako",
+  tenaga: "Bantuan Tenaga",
+};
+
 export const SURPLUS_DECISION_LABEL: Record<SurplusDecision, string> = {
   disimpan: "Disimpan",
-  kegiatan_berikutnya: "Untuk kegiatan berikutnya",
+  kegiatan_berikutnya: "Digunakan untuk kegiatan berikutnya",
   ditukar: "Ditukar",
   dijual: "Dijual kembali",
+  disalurkan: "Disalurkan",
   didonasikan: "Didonasikan",
   lainnya: "Lainnya",
 };
+
+/** Lima pilihan pengelolaan sisa barang sesuai ketentuan panitia. */
+export const SURPLUS_DECISION_OPTIONS: SurplusDecision[] = [
+  "disimpan",
+  "kegiatan_berikutnya",
+  "ditukar",
+  "dijual",
+  "disalurkan",
+];
+
+/** Satuan umum untuk infaq barang/sembako. */
+export const UNIT_OPTIONS = ["Kg", "Gram", "Liter", "Dus", "Bungkus", "Pcs", "Karung", "Toples", "Orang", "Porsi"];
 
 export const SURPLUS_CONDITION_LABEL: Record<SurplusCondition, string> = {
   sisa: "Sisa",

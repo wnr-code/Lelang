@@ -3,7 +3,7 @@ import Image from "next/image";
 import { UserRound } from "lucide-react";
 import { NotifBell } from "@/components/notif-bell";
 import type { ItemStatus, SubmissionStatus } from "@/lib/types";
-import { ITEM_STATUS_LABEL } from "@/lib/types";
+import { ITEM_STATUS_LABEL, SUBMISSION_STATUS_LABEL } from "@/lib/types";
 
 /** Logo + nama + subjudul resmi: CIGATAS · Korwil Cigatas · Bersama dalam Kebaikan. */
 export function BrandMark({ size = "md", href = "/" }: { size?: "sm" | "md"; href?: string }) {
@@ -106,13 +106,14 @@ export function ItemStatusChip({ status }: { status: ItemStatus }) {
 }
 
 export function SubmissionStatusChip({ status }: { status: SubmissionStatus }) {
-  const map: Record<SubmissionStatus, { label: string; cls: string }> = {
-    pending: { label: "Menunggu konfirmasi", cls: "bg-amber-100 text-amber-800" },
-    approved: { label: "Disetujui", cls: "bg-emerald-100 text-emerald-800" },
-    rejected: { label: "Ditolak", cls: "bg-rose-100 text-rose-700" },
+  const cls: Record<SubmissionStatus, string> = {
+    pending: "bg-amber-100 text-amber-800",
+    approved: "bg-emerald-100 text-emerald-800",
+    needs_confirmation: "bg-sky-100 text-sky-800",
+    rejected: "bg-rose-100 text-rose-700",
+    done: "bg-emerald-600 text-white",
   };
-  const s = map[status] ?? map.pending;
-  return <span className={`chip ${s.cls}`}>{s.label}</span>;
+  return <span className={`chip ${cls[status] ?? cls.pending}`}>{SUBMISSION_STATUS_LABEL[status] ?? "Menunggu konfirmasi"}</span>;
 }
 
 export function ProgressBar({ value, max, className = "" }: { value: number; max: number; className?: string }) {

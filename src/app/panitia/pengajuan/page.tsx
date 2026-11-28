@@ -10,8 +10,10 @@ export const dynamic = "force-dynamic";
 
 const FILTERS = [
   { key: "all", label: "Semua" },
-  { key: "pending", label: "Menunggu" },
+  { key: "pending", label: "Menunggu konfirmasi" },
+  { key: "needs_confirmation", label: "Perlu konfirmasi" },
   { key: "approved", label: "Disetujui" },
+  { key: "done", label: "Selesai" },
   { key: "rejected", label: "Ditolak" },
 ];
 
@@ -27,9 +29,12 @@ export default async function PengajuanPage({ searchParams }: { searchParams: Pr
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl font-extrabold text-ink">Pengajuan Anggota</h1>
+        <h1 className="text-xl font-extrabold text-ink">Kelola Pengajuan</h1>
         <p className="mt-0.5 text-sm text-stone-500">
-          Persetujuan bantuan. {pendingCount > 0 ? `${pendingCount} pengajuan menunggu keputusan.` : "Tidak ada yang menunggu."}
+          Verifikasi bantuan barang & tenaga. {pendingCount > 0 ? `${pendingCount} pengajuan menunggu konfirmasi.` : "Tidak ada yang menunggu."}
+        </p>
+        <p className="mt-1 text-[11px] text-stone-400">
+          Pengajuan anggota tidak otomatis dihitung sebagai kontribusi diterima — panitia wajib memverifikasi.
         </p>
       </div>
 
