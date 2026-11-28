@@ -239,8 +239,15 @@ for (const scope of ["all", "collected", "pending"]) {
   check(`export ${scope} memuat satuan/pengajuan/disetujui/tgl terima`, data.rows.every((row) => "unit" in row && "submitted" in row && "approved" in row && "receivedAt" in row));
   const pdf = await E.generatePdf(data);
   check(`PDF ${scope} valid (%PDF)`, pdf.subarray(0, 4).toString() === "%PDF");
+  check(`PDF ${scope} menyertakan logo (image XObject)`, /\/Subtype\s*\/Image/.test(pdf.toString("latin1")));
   const xlsx = await E.generateExcel(data);
   check(`XLSX ${scope} valid (PK)`, xlsx.subarray(0, 2).toString() === "PK");
+  check(`XLSX ${scope} menyertakan logo (media PNG)`, xlsx.toString("latin1").includes("xl/media/image1.png"));
+}
+{
+  const LOGO = await import("../src/lib/report-logo.ts");
+  check("logo laporan PNG base64 valid", LOGO.REPORT_LOGO_PNG_BASE64.length > 1000 && Buffer.from(LOGO.REPORT_LOGO_PNG_BASE64, "base64").subarray(1, 4).toString() === "PNG");
+  check("logo laporan rasio sesuai sumber", LOGO.REPORT_LOGO_WIDTH === 400 && LOGO.REPORT_LOGO_HEIGHT === 266);
 }
 {
   const all = await E.buildExportData(1, "all");
