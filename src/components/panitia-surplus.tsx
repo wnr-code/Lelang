@@ -103,7 +103,7 @@ export function SurplusSection({ eventId, items, surplus }: { eventId: number; i
           </div>
           <div>
             <label className="label">Penanggung jawab</label>
-            <input name="pic_name" maxLength={80} className="input py-2.5 text-xs" placeholder="mis. Teh Nisa" />
+            <input name="pic_name" maxLength={80} className="input py-2.5 text-xs" placeholder="Nama Ikhwan/Akhwat" />
           </div>
           <div>
             <label className="label">Hasil (jika sudah)</label>

@@ -61,13 +61,13 @@ export function MemberSettings() {
         </p>
         <div className="mt-4 space-y-3">
           <div>
-            <label className="label" htmlFor="set-nickname">Nama panggilan</label>
+            <label className="label" htmlFor="set-nickname">Nama panggilan (Ikhwan/Akhwat)</label>
             <input
               id="set-nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               maxLength={80}
-              placeholder="mis. Kang Asep"
+              placeholder="Nama Ikhwan/Akhwat"
               className="input"
               disabled={!ready}
             />
