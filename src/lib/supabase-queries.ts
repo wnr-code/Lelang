@@ -9,6 +9,7 @@ import {
   mapSurplus,
   mapPhoto,
   mapProposal,
+  normTs,
 } from "./mappers";
 import { computeItemsWithStatus } from "./item-status";
 import type {
@@ -187,12 +188,13 @@ export type SubmissionJoined = SubmissionRow & {
   item_kind: string;
   event_title: string;
   event_slug: string;
+  received_at: string | null;
 };
 
 export async function sbGetSubmissions(eventId?: number, status?: string): Promise<SubmissionJoined[]> {
   let q = getSupabase()
     .from(TABLES.submissions)
-    .select("*, items(name, kind), events(title, slug)");
+    .select("*, items(name, kind), events(title, slug), fulfillments(received_at)");
   if (eventId) q = q.eq("event_id", eventId);
   if (status && status !== "all") q = q.eq("status", status);
   const { data, error } = await q;
@@ -201,12 +203,14 @@ export async function sbGetSubmissions(eventId?: number, status?: string): Promi
   const mapped: SubmissionJoined[] = rows.map((r) => {
     const item = (r.items ?? {}) as Raw;
     const event = (r.events ?? {}) as Raw;
+    const ful = (Array.isArray(r.fulfillments) ? r.fulfillments[0] : r.fulfillments) as Raw | undefined;
     return {
       ...mapSubmission(r),
       item_name: String(item.name ?? ""),
       item_kind: item.kind === "tenaga" ? "tenaga" : "barang",
       event_title: String(event.title ?? ""),
       event_slug: String(event.slug ?? ""),
+      received_at: normTs(ful?.received_at),
     };
   });
   mapped.sort((a, b) => {

@@ -18,11 +18,8 @@ import {
   sbUpdateItem,
   sbToggleItemOpen,
   sbDeleteItem,
-  sbDecideSubmission,
   sbAddFulfillment,
-  sbToggleReceived,
   sbSetPic,
-  sbDeleteFulfillment,
   sbAddSurplus,
   sbUpdateSurplus,
   sbDeleteSurplus,
@@ -36,18 +33,20 @@ import {
 import { isWorkerd } from "./storage";
 import { SUBMISSION_DECISIONS, SURPLUS_DECISION_LABEL } from "./types";
 import type { SubmissionStatus, SurplusDecision, ItemCategory, ProposalStatus } from "./types";
+import { transitionSubmission, setFulfillmentReceived, deleteFulfillmentConsistent } from "./submission-mutations";
+import { decisionToAction } from "./submission-flow";
 
-const DECISION_MESSAGE: Record<SubmissionStatus, string> = {
-  pending: "Pengajuan dikembalikan ke daftar tunggu.",
-  approved: "Pengajuan disetujui. Catat penerimaan di menu Kelola Barang.",
-  needs_confirmation: "Pengajuan ditandai perlu konfirmasi. Hubungi anggota lewat WhatsApp.",
-  rejected: "Pengajuan ditolak.",
-  done: "Pengajuan selesai — bantuan tercatat sudah diterima.",
-};
+export type ActionResult = {
+  ok: true;
+  message?: string;
+  code?: string;
+  id?: number;
+  status?: SubmissionStatus;
+  fulfillmentId?: number | null;
+  receivedAt?: string | null;
+} | { ok: false; error: string };
 
-export type ActionResult = { ok: true; message?: string; code?: string; id?: number } | { ok: false; error: string };
-
-const ok = (message?: string, extra?: { code?: string; id?: number }): ActionResult => ({ ok: true, message, ...extra });
+const ok = (message?: string, extra?: { code?: string; id?: number; status?: SubmissionStatus; fulfillmentId?: number | null; receivedAt?: string | null }): ActionResult => ({ ok: true, message, ...extra });
 const fail = (error: string): ActionResult => ({ ok: false, error });
 
 async function guard(): Promise<boolean> {
@@ -501,41 +500,27 @@ export async function deleteItemAction(id: number): Promise<ActionResult> {
 export async function decideSubmissionAction(id: number, decision: SubmissionStatus, note: string): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   if (!SUBMISSION_DECISIONS.includes(decision)) return fail("Status keputusan tidak valid.");
-  if (isSupabaseConfigured()) {
-    const r = await sbDecideSubmission(id, decision, note);
-    if (r.ok) await logStatus("submission", id, decision, note || DECISION_MESSAGE[decision], "panitia");
-    revalidateAll();
-    return r;
-  }
-
-  const { getDb } = await loadSqliteDb();
-  const db = getDb();
-  const sub = db.prepare("SELECT * FROM submissions WHERE id=?").get(id) as { item_id: number; nickname: string; qty: number | null; qty_label: string } | undefined;
-  if (!sub) return fail("Pengajuan tidak ditemukan.");
-  db.prepare("UPDATE submissions SET status=?, decided_at=datetime('now'), decision_note=? WHERE id=?")
-    .run(decision, note.slice(0, 1000), id);
-
-  const existing = db.prepare("SELECT id FROM fulfillments WHERE submission_id=?").get(id) as { id: number } | undefined;
-  if (decision === "approved") {
-    // Disetujui = kesediaan dicatat, BELUM diterima. Verifikasi tetap di menu Barang.
-    if (!existing) {
-      db.prepare("INSERT INTO fulfillments (item_id,submission_id,person_name,qty,qty_label) VALUES (?,?,?,?,?)")
-        .run(sub.item_id, id, sub.nickname, sub.qty, sub.qty_label);
-    }
-  } else if (decision === "rejected") {
-    db.prepare("DELETE FROM fulfillments WHERE submission_id=? AND received=0").run(id);
-  } else if (decision === "done") {
-    // Selesai = panitia sudah memverifikasi penerimaan.
-    if (!existing) {
-      db.prepare("INSERT INTO fulfillments (item_id,submission_id,person_name,qty,qty_label,received,received_at) VALUES (?,?,?,?,?,1,datetime('now'))")
-        .run(sub.item_id, id, sub.nickname, sub.qty, sub.qty_label);
-    } else {
-      db.prepare("UPDATE fulfillments SET received=1, received_at=COALESCE(received_at, datetime('now')) WHERE id=?").run(existing.id);
-    }
-  }
-  await logStatus("submission", id, decision, note || DECISION_MESSAGE[decision], "panitia");
+  const action = decisionToAction(decision);
+  if (!action) return fail("Status keputusan tidak valid.");
+  const r = await transitionSubmission(id, action, note);
   revalidateAll();
-  return ok(DECISION_MESSAGE[decision]);
+  return r;
+}
+
+/** Satu tombol: majukan status pengajuan ke tahap berikutnya di tempat (tanpa pindah tab). */
+export async function advanceSubmissionAction(id: number, note = ""): Promise<ActionResult> {
+  if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
+  const r = await transitionSubmission(id, "advance", note);
+  revalidateAll();
+  return r;
+}
+
+/** Batalkan tanda diterima fisik: pengajuan selesai → disetujui (belum diterima). */
+export async function undoReceiveSubmissionAction(id: number): Promise<ActionResult> {
+  if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
+  const r = await transitionSubmission(id, "undo_receive", "");
+  revalidateAll();
+  return r;
 }
 
 // ---------- Panitia: barang & penanggung jawab ----------
@@ -572,23 +557,9 @@ export async function addFulfillmentAction(_prev: unknown, formData: FormData): 
 
 export async function toggleReceivedAction(id: number, received: boolean): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
-  if (isSupabaseConfigured()) {
-    const r = await sbToggleReceived(id, received);
-    revalidateAll();
-    return r;
-  }
-  const { getDb } = await loadSqliteDb();
-  const db = getDb();
-  const f = db.prepare("SELECT submission_id FROM fulfillments WHERE id=?").get(id) as { submission_id: number | null } | undefined;
-  db.prepare("UPDATE fulfillments SET received=?, received_at=? WHERE id=?")
-    .run(received ? 1 : 0, received ? new Date().toISOString().slice(0, 19).replace("T", " ") : null, id);
-  if (f?.submission_id) {
-    db.prepare("UPDATE submissions SET status=? WHERE id=? AND status IN ('approved','done')")
-      .run(received ? "done" : "approved", f.submission_id);
-    await logStatus("submission", f.submission_id, received ? "done" : "approved", received ? "Penerimaan barang diverifikasi panitia." : "Tanda diterima dibatalkan panitia.", "panitia");
-  }
+  const r = await setFulfillmentReceived(id, received);
   revalidateAll();
-  return ok(received ? "Barang ditandai diterima." : "Tanda diterima dibatalkan.");
+  return r;
 }
 
 export async function setPicAction(itemId: number, fulfillmentId: number): Promise<ActionResult> {
@@ -608,15 +579,9 @@ export async function setPicAction(itemId: number, fulfillmentId: number): Promi
 
 export async function deleteFulfillmentAction(id: number): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
-  if (isSupabaseConfigured()) {
-    const r = await sbDeleteFulfillment(id);
-    revalidateAll();
-    return r;
-  }
-  const { getDb } = await loadSqliteDb();
-  getDb().prepare("DELETE FROM fulfillments WHERE id=?").run(id);
+  const r = await deleteFulfillmentConsistent(id);
   revalidateAll();
-  return ok("Data barang dihapus.");
+  return r;
 }
 
 // ---------- Panitia: surplus / sisa barang ----------

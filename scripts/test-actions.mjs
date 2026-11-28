@@ -450,6 +450,104 @@ check("WA panitia ternormalisasi 62", (await Q.getPanitiaWa()) === "628123456789
   check("dashboard punya proposalsPending", typeof counts.proposalsPending === "number");
 }
 
+console.log("== Kelola Pengajuan: satu tombol & konsistensi alur ==");
+{
+  const FLOW = await import("../src/lib/submission-flow.ts");
+  // Transisi sah
+  check("advance pending→approved", FLOW.resolveTransition("pending", "advance").to === "approved");
+  check("advance approved→done", FLOW.resolveTransition("approved", "advance").to === "done");
+  check("advance needs_confirmation→approved", FLOW.resolveTransition("needs_confirmation", "advance").to === "approved");
+  check("advance rejected→approved", FLOW.resolveTransition("rejected", "advance").to === "approved");
+  check("advance done→null (selesai)", FLOW.resolveTransition("done", "advance").error);
+  // Transisi tidak sah (jangan asal-asalan)
+  check("receive dari pending ditolak", FLOW.resolveTransition("pending", "receive").error);
+  check("receive dari rejected ditolak", FLOW.resolveTransition("rejected", "receive").error);
+  check("reject pengajuan done ditolak", FLOW.resolveTransition("done", "reject").error);
+  check("approve pengajuan done ditolak", FLOW.resolveTransition("done", "approve").error);
+  check("undo_receive hanya dari done/approved", FLOW.resolveTransition("pending", "undo_receive").error);
+  check("label utama pending = Setujui", FLOW.primaryActionLabel("pending") === "Setujui Pengajuan");
+  check("label utama approved = Tandai Diterima", FLOW.primaryActionLabel("approved") === "Tandai Diterima Fisik");
+  check("label utama done = null", FLOW.primaryActionLabel("done") === null);
+
+  // End-to-end via server action (SQLite)
+  const item = (await Q.getItemsWithStatus(1)).find((i) => i.is_open) || (await Q.getItemsWithStatus(1))[0];
+  const rr = await A.submitHelpAction(null, fd({ item_id: item.id, nickname: "Uji Satu Tombol", qty: 3, unit: "Kg", contact: "081234500099" }));
+  check("pengajuan uji dibuat", rr.ok === true);
+  const t0 = await Q.getSubmissionByCode(rr.code);
+  check("awal pending", t0.status === "pending");
+  check("pending belum punya catatan pemenuhan", !(await Q.getFulfillments(item.id)).some((f) => f.submission_id === t0.id));
+  const receivedBefore = (await Q.getItemsWithStatus(1)).find((i) => i.id === item.id).received_qty;
+
+  // Tidak boleh langsung diterima dari pending
+  const badReceive = await A.decideSubmissionAction(t0.id, "done", "lompat");
+  check("server menolak pending→done langsung", badReceive.ok === false);
+  check("status tetap pending setelah aksi tak sah", (await Q.getSubmissionByCode(rr.code)).status === "pending");
+
+  // Satu tombol: pending → approved (belum diterima)
+  const a1 = await A.advanceSubmissionAction(t0.id, "catat kesediaan");
+  check("advance ke approved berhasil", a1.ok === true && a1.status === "approved");
+  const t1 = await Q.getSubmissionByCode(rr.code);
+  check("status approved di tempat", t1.status === "approved");
+  const f1 = (await Q.getFulfillments(item.id)).find((f) => f.submission_id === t0.id);
+  check("approved membuat tepat satu catatan pemenuhan", Boolean(f1) && f1.received === 0);
+  const itemAfterApprove = (await Q.getItemsWithStatus(1)).find((i) => i.id === item.id);
+  check("approved TIDAK menambah jumlah diterima", itemAfterApprove.received_qty === receivedBefore);
+
+  // Tidak boleh menolak/mengubah yang sudah diterima nanti; tapi approved masih bisa ditolak
+  const rej = await A.decideSubmissionAction(t0.id, "rejected", "batal");
+  check("approved bisa ditolak", rej.ok === true && rej.status === "rejected");
+  check("rejected menghapus catatan pemenuhan belum diterima", !(await Q.getFulfillments(item.id)).some((f) => f.submission_id === t0.id));
+  const a2 = await A.advanceSubmissionAction(t0.id);
+  check("advance rejected→approved", a2.ok === true && a2.status === "approved");
+
+  // Satu tombol: approved → done (diterima fisik)
+  const a3 = await A.advanceSubmissionAction(t0.id);
+  check("advance ke done berhasil", a3.ok === true && a3.status === "done");
+  const t2 = await Q.getSubmissionByCode(rr.code);
+  check("status done di tempat", t2.status === "done");
+  const f2 = (await Q.getFulfillments(item.id)).find((f) => f.submission_id === t0.id);
+  check("done = diterima fisik + tanggal", f2 && f2.received === 1 && f2.received_at);
+  check("getSubmissions membawa received_at", (await Q.getSubmissions(1, "done")).find((s) => s.id === t0.id)?.received_at);
+
+  // done tidak boleh ditolak / disetujui ulang tanpa batalkan terima
+  check("server menolak reject pada done", (await A.decideSubmissionAction(t0.id, "rejected", "")).ok === false);
+  check("server menolak approve pada done", (await A.decideSubmissionAction(t0.id, "approved", "")).ok === false);
+  check("advance pada done ditolak (sudah selesai)", (await A.advanceSubmissionAction(t0.id)).ok === false);
+  check("status tetap done setelah aksi tak sah", (await Q.getSubmissionByCode(rr.code)).status === "done");
+
+  // Batalkan diterima → approved (belum diterima)
+  const undo = await A.undoReceiveSubmissionAction(t0.id);
+  check("batalkan diterima berhasil", undo.ok === true && undo.status === "approved");
+  const f3 = (await Q.getFulfillments(item.id)).find((f) => f.submission_id === t0.id);
+  check("setelah batal: catatan tetap ada, belum diterima", f3 && f3.received === 0 && !f3.received_at);
+  check("status kembali approved", (await Q.getSubmissionByCode(rr.code)).status === "approved");
+
+  // Hapus catatan pemenuhan → pengajuan kembali menunggu (konsisten)
+  const del = await A.deleteFulfillmentAction(f3.id);
+  check("hapus catatan pemenuhan berhasil", del.ok === true);
+  check("pengajuan kembali pending setelah catatan dihapus", (await Q.getSubmissionByCode(rr.code)).status === "pending");
+  check("catatan pemenuhan terhapus", !(await Q.getFulfillments(item.id)).some((f) => f.submission_id === t0.id));
+
+  // Invarian: tidak ada duplikat catatan pemenuhan per pengajuan (indeks unik)
+  const allFul = await Q.getFulfillments(item.id);
+  const bySub = allFul.filter((f) => f.submission_id != null).map((f) => f.submission_id);
+  check("tidak ada duplikat submission_id pada pemenuhan", new Set(bySub).size === bySub.length);
+
+  // Riwayat status tercatat untuk transisi
+  const logs = await SL.getStatusLogs("submission", t0.id);
+  check("riwayat memuat approved & done", logs.some((l) => l.status === "approved") && logs.some((l) => l.status === "done"));
+
+  // Jalur needs_confirmation → approved (satu tombol)
+  const rr2 = await A.submitHelpAction(null, fd({ item_id: item.id, nickname: "Uji Konfirmasi", qty: 1, contact: "081234500098" }));
+  const t3 = await Q.getSubmissionByCode(rr2.code);
+  const nc = await A.decideSubmissionAction(t3.id, "needs_confirmation", "cek dulu");
+  check("tandai perlu konfirmasi", nc.ok === true && nc.status === "needs_confirmation");
+  check("needs_confirmation belum punya pemenuhan", !(await Q.getFulfillments(item.id)).some((f) => f.submission_id === t3.id));
+  const a4 = await A.advanceSubmissionAction(t3.id);
+  check("advance needs_confirmation→approved", a4.ok === true && a4.status === "approved");
+  check("approved dari konfirmasi punya pemenuhan belum diterima", (await Q.getFulfillments(item.id)).find((f) => f.submission_id === t3.id)?.received === 0);
+}
+
 console.log("== Logout ==");
 await A.logoutAction().catch(() => {});
 check("cookie dihapus", !jar.has("cigatas_panitia"));
