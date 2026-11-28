@@ -14,6 +14,7 @@ import {
   sbGetItemById,
   sbGetItemsWithStatus,
   sbGetFulfillments,
+  sbGetFulfillmentsWithContact,
   sbGetFulfillmentsForEvent,
   sbGetSubmissions,
   sbGetSubmissionByCode,
@@ -33,6 +34,7 @@ import type {
   ItemRow,
   ItemWithStatus,
   FulfillmentRow,
+  FulfillmentWithContact,
   SurplusRow,
   PhotoRow,
 } from "./types";
@@ -104,6 +106,17 @@ export async function getFulfillments(itemId: number): Promise<FulfillmentRow[]>
   return getDb()
     .prepare("SELECT * FROM fulfillments WHERE item_id = ? ORDER BY is_pic DESC, id ASC")
     .all(itemId) as unknown as FulfillmentRow[];
+}
+export async function getFulfillmentsWithContact(itemId: number): Promise<FulfillmentWithContact[]> {
+  if (isSupabaseConfigured()) return sbGetFulfillmentsWithContact(itemId);
+  const { getDb } = await loadSqliteDb();
+  return getDb()
+    .prepare(
+      `SELECT f.*, COALESCE(s.contact, '') AS contact, COALESCE(s.track_code, '') AS track_code, s.status AS submission_status
+       FROM fulfillments f LEFT JOIN submissions s ON s.id = f.submission_id
+       WHERE f.item_id = ? ORDER BY f.is_pic DESC, f.id ASC`
+    )
+    .all(itemId) as unknown as FulfillmentWithContact[];
 }
 
 export async function getFulfillmentsForEvent(eventId: number): Promise<FulfillmentRow[]> {

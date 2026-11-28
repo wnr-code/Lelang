@@ -16,7 +16,9 @@ import type {
   ItemRow,
   ItemWithStatus,
   SubmissionRow,
+  SubmissionStatus,
   FulfillmentRow,
+  FulfillmentWithContact,
   SurplusRow,
   PhotoRow,
   ItemProposalRow,
@@ -127,6 +129,30 @@ export async function sbGetFulfillments(itemId: number): Promise<FulfillmentRow[
     .order("id", { ascending: true });
   throwIfError(error, "getFulfillments");
   return (data ?? []).map(mapFulfillment);
+}
+
+export async function sbGetFulfillmentsWithContact(itemId: number): Promise<FulfillmentWithContact[]> {
+  const fuls = await sbGetFulfillments(itemId);
+  const subIds = [...new Set(fuls.map((f) => f.submission_id).filter((x): x is number => x != null))];
+  const meta = new Map<number, { contact: string; track_code: string; status: SubmissionStatus }>();
+  if (subIds.length > 0) {
+    const { data, error } = await getSupabase()
+      .from(TABLES.submissions)
+      .select("id, contact, track_code, status")
+      .in("id", subIds);
+    throwIfError(error, "getFulfillmentsWithContact(submissions)");
+    for (const r of (data ?? []) as Raw[]) {
+      meta.set(Number(r.id), {
+        contact: String(r.contact ?? ""),
+        track_code: String(r.track_code ?? ""),
+        status: String(r.status) as SubmissionStatus,
+      });
+    }
+  }
+  return fuls.map((f) => {
+    const m = f.submission_id != null ? meta.get(f.submission_id) : undefined;
+    return { ...f, contact: m?.contact ?? "", track_code: m?.track_code ?? "", submission_status: m?.status ?? null };
+  });
 }
 
 export async function sbGetFulfillmentsForEvent(eventId: number): Promise<FulfillmentRow[]> {
