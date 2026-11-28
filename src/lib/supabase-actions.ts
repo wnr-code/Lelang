@@ -4,7 +4,6 @@
 import { getSupabase, throwIfError, TABLES, PHOTO_BUCKET } from "./supabase";
 import { newTrackCode, slugify } from "./auth";
 import { mapPhoto } from "./mappers";
-import { compressToWebp } from "./photo";
 
 type Res = { ok: true; message?: string; code?: string; id?: number } | { ok: false; error: string };
 const ok = (message?: string, extra?: { code?: string; id?: number }): Res => ({ ok: true, message, ...extra });
@@ -325,36 +324,14 @@ export async function sbDeleteSurplus(id: number): Promise<Res> {
   return ok("Catatan dihapus.");
 }
 
-// ---------- Foto (photon WASM + Supabase Storage) ----------
+// ---------- Foto (metadata di Supabase; bytes di R2 / filesystem) ----------
 
-export async function sbUploadPhoto(eventId: number, caption: string, fileBytes: Uint8Array): Promise<Res> {
-  try {
-    const webp = await compressToWebp(fileBytes);
-    const sb = getSupabase();
-    const objectPath = `${eventId}/${Date.now()}-${Math.random().toString(16).slice(2, 10)}.webp`;
-    const buf = webp.buffer.slice(webp.byteOffset, webp.byteOffset + webp.byteLength) as ArrayBuffer;
-    const blob = new Blob([buf], { type: "image/webp" });
-    const { error: upErr } = await sb.storage
-      .from(PHOTO_BUCKET)
-      .upload(objectPath, blob, { contentType: "image/webp", upsert: true });
-    throwIfError(upErr, "uploadPhoto(storage)");
-    const { data: pub } = sb.storage.from(PHOTO_BUCKET).getPublicUrl(objectPath);
-    const { error: insErr } = await sb
-      .from(TABLES.photos)
-      .insert({ event_id: eventId, file_path: pub.publicUrl, caption });
-    throwIfError(insErr, "uploadPhoto(db)");
-    return ok(`Foto diupload & dikompres otomatis (${Math.round(webp.length / 1024)} KB).`);
-  } catch (e) {
-    console.error("uploadPhoto", e);
-    const msg = e instanceof Error ? e.message : String(e);
-    if (/unsupported|mime|format|decode|invalid|signature/i.test(msg)) {
-      return fail("Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.");
-    }
-    if (/size|large|payload|entity|too big/i.test(msg)) {
-      return fail("Foto terlalu besar. Maksimal 2 MB.");
-    }
-    return fail("Gagal memproses foto. Coba lagi dengan foto JPG/PNG/WebP yang lebih kecil.");
-  }
+export async function sbInsertPhoto(eventId: number, caption: string, filePath: string): Promise<Res> {
+  const { error } = await getSupabase()
+    .from(TABLES.photos)
+    .insert({ event_id: eventId, file_path: filePath, caption });
+  throwIfError(error, "insertPhoto(db)");
+  return ok("Foto tersimpan.");
 }
 
 export async function sbDeletePhoto(id: number): Promise<Res> {
@@ -363,11 +340,13 @@ export async function sbDeletePhoto(id: number): Promise<Res> {
   throwIfError(error, "deletePhoto(baca)");
   if (data) {
     const photo = mapPhoto(data);
-    const marker = `/object/public/${PHOTO_BUCKET}/`;
-    const idx = photo.file_path.indexOf(marker);
-    if (idx >= 0) {
-      const objectPath = photo.file_path.slice(idx + marker.length);
-      await sb.storage.from(PHOTO_BUCKET).remove([objectPath]);
+    if (photo.file_path.startsWith("/api/foto/")) {
+      const { isWorkerd, deletePhotoObject } = await import("./storage");
+      if (isWorkerd()) await deletePhotoObject(photo.file_path.slice("/api/foto/".length));
+    } else {
+      const marker = `/object/public/${PHOTO_BUCKET}/`;
+      const idx = photo.file_path.indexOf(marker);
+      if (idx >= 0) await sb.storage.from(PHOTO_BUCKET).remove([photo.file_path.slice(idx + marker.length)]);
     }
   }
   const { error: delErr } = await sb.from(TABLES.photos).delete().eq("id", id);

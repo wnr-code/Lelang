@@ -136,6 +136,22 @@ const meta = await sharp(fpath).metadata();
 check("terkompres ≤1600px", meta.width <= 1600);
 check("format webp", meta.format === "webp");
 
+console.log("== Route sajian foto (/api/foto) ==");
+const fotoRoute = await import("../src/app/api/foto/[...key]/route.ts");
+const fotoRes = await fotoRoute.GET(new Request("http://localhost/api/foto/" + fname), {
+  params: Promise.resolve({ key: [fname] }),
+});
+check("route foto 200", fotoRes.status === 200);
+check("content-type image/webp", fotoRes.headers.get("content-type") === "image/webp");
+const fotoBytes = new Uint8Array(await fotoRes.arrayBuffer());
+check("isi foto sama dengan file tersimpan", fotoBytes.length === fs.statSync(fpath).size);
+const fotoMissing = await fotoRoute.GET(new Request("http://localhost/api/foto/tidak-ada.webp"), {
+  params: Promise.resolve({ key: ["tidak-ada.webp"] }),
+});
+check("foto tidak ada → 404", fotoMissing.status === 404);
+const { isWorkerd } = await import("../src/lib/storage.ts");
+check("preview Node terdeteksi bukan workerd", isWorkerd() === false);
+
 console.log("== Batas upload foto 2 MB ==");
 const { randomBytes } = await import("node:crypto");
 const raw = randomBytes(2400 * 2400 * 3);

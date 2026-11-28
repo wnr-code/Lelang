@@ -3,6 +3,13 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 export async function resolve(specifier, context, nextResolve) {
+  // Alias TypeScript "@/..." → src/...
+  if (specifier.startsWith("@/")) {
+    const base = new URL("../src/" + specifier.slice(2), import.meta.url);
+    for (const cand of [base, new URL(base.href + ".ts"), new URL(base.href + ".tsx")]) {
+      if (existsSync(fileURLToPath(cand))) return { url: cand.href, shortCircuit: true };
+    }
+  }
   if (specifier === "next/headers" || specifier === "next/cache" || specifier === "next/navigation") {
     return { url: "mock:" + specifier, shortCircuit: true };
   }

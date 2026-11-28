@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -7,13 +7,31 @@ const DB_PATH = path.join(DATA_DIR, "cigatas.db");
 
 let db: DatabaseSync | null = null;
 
+// `node:sqlite` mengembalikan baris ber-prototype null. React Server Components
+// menolak objek seperti itu saat dikirim ke Client Component ("Only plain objects…").
+// Salin setiap baris jadi objek biasa agar halaman panitia tidak error di preview.
+function plainStatement(stmt: StatementSync): StatementSync {
+  const get = stmt.get.bind(stmt);
+  const all = stmt.all.bind(stmt);
+  stmt.get = ((...args: Parameters<StatementSync["get"]>) => {
+    const row = get(...args);
+    return row ? { ...row } : row;
+  }) as StatementSync["get"];
+  stmt.all = ((...args: Parameters<StatementSync["all"]>) =>
+    all(...args).map((row) => ({ ...row }))) as StatementSync["all"];
+  return stmt;
+}
+
 export function getDb(): DatabaseSync {
   if (db) return db;
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  db = new DatabaseSync(DB_PATH);
-  db.exec("PRAGMA journal_mode = WAL;");
-  db.exec("PRAGMA foreign_keys = ON;");
-  migrate(db);
+  const raw = new DatabaseSync(DB_PATH);
+  raw.exec("PRAGMA journal_mode = WAL;");
+  raw.exec("PRAGMA foreign_keys = ON;");
+  migrate(raw);
+  const prepare = raw.prepare.bind(raw);
+  raw.prepare = ((sql: string) => plainStatement(prepare(sql))) as DatabaseSync["prepare"];
+  db = raw;
   return db;
 }
 
