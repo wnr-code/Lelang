@@ -22,7 +22,7 @@ BEGIN
   END IF;
   cmd := format(
     $job$SELECT net.http_post(
-      url := 'https://lelang.cgs.my.id/api/cron/reminders',
+      url := 'https://lelang.appwnr.workers.dev/api/cron/reminders',
       headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-key', %L),
       body := '{}'::jsonb,
       timeout_milliseconds := 30000
