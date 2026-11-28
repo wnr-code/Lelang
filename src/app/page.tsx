@@ -34,6 +34,9 @@ export default async function HomePage() {
             Bersama kita penuhi kebutuhan kegiatan Cigatas. Tanpa akun, tanpa nominal uang — cukup nama
             panggilan dan kesediaanmu.
           </p>
+          <Link href="/tentang" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline">
+            Apa itu Lelang Kebaikan? <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </section>
 
         <div className="relative mx-auto mb-8 max-w-md overflow-hidden rounded-3xl">
