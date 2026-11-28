@@ -85,7 +85,7 @@ export function MemberSettings() {
               className="input"
               disabled={!ready}
             />
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-stone-400">
+            <p className="mt-1 flex items-center gap-1 text-[12px] text-stone-400">
               <Phone className="h-3 w-3" /> Hanya terlihat oleh panitia untuk follow up.
             </p>
           </div>
@@ -109,7 +109,7 @@ export function MemberSettings() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-ink">{l.title}</p>
-              <p className="truncate text-[11px] text-stone-400">{l.desc}</p>
+              <p className="truncate text-[12px] text-stone-400">{l.desc}</p>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" />
           </Link>
@@ -118,7 +118,7 @@ export function MemberSettings() {
 
       <section className="card px-5 py-4">
         <p className="text-xs font-extrabold text-ink">Tentang Aplikasi</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+        <p className="mt-1 text-[12px] leading-relaxed text-stone-500">
           Lelang Kebaikan Cigatas · Korwil Cigatas. Anggota tidak perlu login atau membuat akun. Bantuan berupa barang,
           sembako, dan tenaga — bukan jual beli. Setiap pengajuan diverifikasi panitia sebelum dicatat sebagai diterima.
         </p>

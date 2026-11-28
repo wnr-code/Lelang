@@ -6,6 +6,7 @@ import "@fontsource/plus-jakarta-sans/700.css";
 import "@fontsource/plus-jakarta-sans/800.css";
 import "./globals.css";
 import { MobileNav } from "@/components/mobile-nav";
+import { SwRegister } from "@/components/sw-register";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lelang.cgs.my.id"),
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh font-sans">
         {children}
         <MobileNav />
+        <SwRegister />
       </body>
     </html>
   );

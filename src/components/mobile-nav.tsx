@@ -29,7 +29,7 @@ export function MobileNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-bold transition ${active ? "text-emerald-700" : "text-stone-400"}`}
+              className={`flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition ${active ? "text-emerald-700" : "text-stone-400"}`}
             >
               <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.3 : 1.9} />
               {label}

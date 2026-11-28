@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, UserCheck, PackageCheck, Trash2, CalendarCheck } from "lucide-react";
 import { addFulfillmentAction, toggleReceivedAction, setPicAction, deleteFulfillmentAction } from "@/lib/actions";
-import type { ItemWithStatus, FulfillmentRow } from "@/lib/types";
+import { ITEM_CATEGORY_LABEL, type ItemWithStatus, FulfillmentRow } from "@/lib/types";
 import { ItemStatusChip, ProgressBar } from "@/components/ui";
 import { ITEM_STATUS_LABEL } from "@/lib/types";
 import { fmtQty } from "@/lib/item-status";
@@ -18,15 +18,15 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-extrabold text-ink">{item.name}</h3>
-          <span className={`chip mt-1 ${item.kind === "tenaga" ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-800"}`}>
-            {item.kind === "tenaga" ? "Bantuan Tenaga" : "Barang / Sembako"}
+          <span className={`chip mt-1 ${item.category === "tenaga" ? "bg-violet-100 text-violet-700" : item.category === "sembako" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+            {ITEM_CATEGORY_LABEL[item.category]}
           </span>
         </div>
         <ItemStatusChip status={item.status} />
       </div>
 
       {/* Catatan lengkap tiap barang: target, pengajuan, disetujui, diterima, satuan, PJ, tanggal, status */}
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-stone-50 px-3.5 py-3 text-[11px] sm:grid-cols-4">
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-stone-50 px-3.5 py-3 text-[12px] sm:grid-cols-4">
         <Field label="Jumlah target" value={item.target_label} />
         <Field label="Satuan" value={item.unit || "—"} />
         <Field label="Jumlah pengajuan" value={`${item.submitted_count} pengajuan`} />
@@ -57,12 +57,12 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
                   <span className="chip bg-emerald-600 text-white"><UserCheck className="h-3 w-3" /> Penanggung Jawab</span>
                 )}
               </p>
-              <p className="text-[11px] text-stone-400">
+              <p className="text-[12px] text-stone-400">
                 {f.qty_label || "Jumlah tidak dicatat"}
                 {f.note ? ` · ${f.note}` : ""}
               </p>
               {f.received === 1 && (
-                <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                   <CalendarCheck className="h-3 w-3" /> Diterima: {shortDateTime(f.received_at ?? f.created_at)}
                 </p>
               )}
@@ -71,7 +71,7 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
               <button
                 disabled={pending}
                 onClick={() => run(() => toggleReceivedAction(f.id, f.received !== 1))}
-                className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${f.received === 1 ? "bg-emerald-600 text-white" : "bg-white text-stone-500 ring-1 ring-stone-200 hover:bg-emerald-50"}`}
+                className={`rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition ${f.received === 1 ? "bg-emerald-600 text-white" : "bg-white text-stone-500 ring-1 ring-stone-200 hover:bg-emerald-50"}`}
                 title={f.received === 1 ? "Sudah diterima — klik untuk membatalkan" : "Tandai barang sudah diterima"}
               >
                 <PackageCheck className="mr-1 inline h-3.5 w-3.5" />
@@ -81,7 +81,7 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
                 <button
                   disabled={pending}
                   onClick={() => run(() => setPicAction(item.id, f.id))}
-                  className="btn-ghost px-2 py-1.5 text-[11px]"
+                  className="btn-ghost px-2 py-1.5 text-[12px]"
                   title="Tetapkan sebagai penanggung jawab"
                 >
                   <UserCheck className="h-3.5 w-3.5" />
@@ -146,7 +146,7 @@ function useAction() {
 function Field({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-stone-400">{label}</dt>
+      <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-400">{label}</dt>
       <dd className={`truncate ${strong ? "font-extrabold text-emerald-700" : "font-semibold text-ink"}`}>{value}</dd>
     </div>
   );

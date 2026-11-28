@@ -43,7 +43,7 @@ export default async function PanitiaDashboard() {
       <div className="banner-grad animate-fade-up relative overflow-hidden rounded-[22px] px-5 py-5 text-white shadow-md shadow-emerald-800/20">
         <div className="relative z-10 max-w-[75%]">
           <h1 className="text-[22px] font-extrabold leading-tight">Dashboard Panitia</h1>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-emerald-50/90">
+          <p className="mt-1.5 text-[13px] leading-relaxed text-emerald-50/90">
             Pantau, kelola, dan wujudkan kegiatan terbaik bersama Cigatas.
           </p>
         </div>
@@ -74,8 +74,8 @@ export default async function PanitiaDashboard() {
                 <m.icon className="h-5 w-5" strokeWidth={2} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-extrabold text-ink">{m.title}</p>
-                <p className="truncate text-[11px] text-stone-500">{m.desc}</p>
+                <p className="truncate text-[14px] font-extrabold text-ink">{m.title}</p>
+                <p className="truncate text-[12px] text-stone-500">{m.desc}</p>
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-stone-400 transition group-hover:translate-x-0.5" />
             </Link>
@@ -87,7 +87,7 @@ export default async function PanitiaDashboard() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[15px] font-extrabold text-ink">Jadwal Kegiatan</h2>
-          <Link href="/panitia/kegiatan" className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700">
+          <Link href="/panitia/kegiatan" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
             Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -103,19 +103,19 @@ export default async function PanitiaDashboard() {
                 <Link key={ev.id} href={`/panitia/barang?event=${ev.id}`} className="card flex items-center gap-3 px-4 py-3.5 transition hover:shadow-md">
                   <div className="flex w-[62px] shrink-0 flex-col items-center rounded-2xl bg-emerald-100/70 py-2">
                     <span className="text-[20px] font-extrabold leading-none text-emerald-900">{db.day}</span>
-                    <span className="text-[12px] font-extrabold text-emerald-900">{db.mon}</span>
-                    <span className="text-[10px] font-semibold text-ink/60">{db.year}</span>
+                    <span className="text-[13px] font-extrabold text-emerald-900">{db.mon}</span>
+                    <span className="text-[11px] font-semibold text-ink/60">{db.year}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-[14px] font-extrabold text-ink">{ev.title}</p>
+                      <p className="truncate text-[15px] font-extrabold text-ink">{ev.title}</p>
                       <span className="chip shrink-0 bg-emerald-100 text-emerald-800">Aktif</span>
                     </div>
-                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-stone-500">
+                    <p className="mt-0.5 flex items-center gap-1 text-[12px] font-semibold text-stone-500">
                       <MapPin className="h-3 w-3 shrink-0 text-emerald-600" />
                       <span className="truncate">{ev.location || "Cigatas"}</span>
                     </p>
-                    <p className="mt-0.5 line-clamp-1 text-[11px] text-stone-400">{ev.description}</p>
+                    <p className="mt-0.5 line-clamp-1 text-[12px] text-stone-400">{ev.description}</p>
                   </div>
                 </Link>
               );
@@ -128,7 +128,7 @@ export default async function PanitiaDashboard() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[15px] font-extrabold text-ink">Pengajuan Terbaru</h2>
-          <Link href="/panitia/pengajuan" className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700">
+          <Link href="/panitia/pengajuan" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
             Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -140,14 +140,14 @@ export default async function PanitiaDashboard() {
               <Link key={s.id} href="/panitia/pengajuan" className="flex items-center gap-3 py-3 transition hover:opacity-80">
                 <Avatar name={s.nickname} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-extrabold text-ink">{s.nickname}</p>
-                  <p className="truncate text-[11px] text-stone-500">
+                  <p className="truncate text-[14px] font-extrabold text-ink">{s.nickname}</p>
+                  <p className="truncate text-[12px] text-stone-500">
                     Permohonan {s.item_name.toLowerCase()} {s.qty_label ? `· ${s.qty_label}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <SubmissionStatusChip status={s.status} />
-                  <span className="text-[10px] text-stone-400">{relativeTime(s.created_at)}</span>
+                  <span className="text-[11px] text-stone-400">{relativeTime(s.created_at)}</span>
                 </div>
               </Link>
             ))}
@@ -161,7 +161,7 @@ export default async function PanitiaDashboard() {
         className="banner-grad flex items-center gap-4 rounded-full px-5 py-4 text-white shadow-md shadow-emerald-800/20 transition hover:opacity-95"
       >
         <HandHeart className="h-9 w-9 shrink-0 text-gold" strokeWidth={1.9} />
-        <p className="flex-1 text-[13px] font-extrabold leading-snug">
+        <p className="flex-1 text-[14px] font-extrabold leading-snug">
           Sedekah Hari Ini,<br />Untuk Kebaikan Esok Nanti
         </p>
         <ChevronRight className="h-5 w-5 shrink-0 text-white/80" />
@@ -179,9 +179,9 @@ function Stat({
   return (
     <div className={`rounded-[20px] ${tile} px-4 py-4 text-center ring-1 ring-emerald-900/5`}>
       <Icon className={`mx-auto h-8 w-8 ${ic}`} strokeWidth={2} />
-      <p className="mt-2 text-[12px] font-bold text-ink/80">{label}</p>
+      <p className="mt-2 text-[13px] font-bold text-ink/80">{label}</p>
       <p className="text-[26px] font-extrabold leading-tight text-ink">{value.toLocaleString("id-ID")}</p>
-      <p className="text-[10px] font-semibold text-emerald-700">{caption}</p>
+      <p className="text-[11px] font-semibold text-emerald-700">{caption}</p>
     </div>
   );
 }

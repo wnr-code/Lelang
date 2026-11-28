@@ -21,8 +21,8 @@ export function BrandMark({ size = "md", href = "/" }: { size?: "sm" | "md"; hre
         <span className={`block font-extrabold tracking-tight text-emerald-800 ${size === "sm" ? "text-base" : "text-lg"}`}>
           CIGATAS
         </span>
-        <span className="block truncate text-[10px] font-semibold text-ink/70">Korwil Cigatas</span>
-        <span className="block truncate text-[10px] italic text-emerald-700">Bersama dalam Kebaikan</span>
+        <span className="block truncate text-[11px] font-semibold text-ink/70">Korwil Cigatas</span>
+        <span className="block truncate text-[11px] italic text-emerald-700">Bersama dalam Kebaikan</span>
       </span>
     </Link>
   );
@@ -30,27 +30,6 @@ export function BrandMark({ size = "md", href = "/" }: { size?: "sm" | "md"; hre
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   return <BrandMark size={compact ? "sm" : "md"} />;
-}
-
-export function PublicHeader({ notif = 0 }: { notif?: number }) {
-  return (
-    <header className="sticky top-0 z-40 border-b border-emerald-900/5 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-[70px] max-w-3xl items-center gap-1 px-4">
-        <div className="min-w-0 flex-1">
-          <BrandMark />
-        </div>
-        <NotifBell count={notif} href="/#informasi" label="Informasi kegiatan" />
-        <Link
-          href="/pengaturan"
-          aria-label="Profil & pengaturan"
-          title="Profil & pengaturan"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-200"
-        >
-          <UserRound className="h-5 w-5" strokeWidth={2} />
-        </Link>
-      </div>
-    </header>
-  );
 }
 
 export function PublicFooter() {
@@ -74,10 +53,10 @@ export function PublicFooter() {
           />
           <div className="relative px-6 py-6 text-center">
             <p lang="ar" dir="rtl" className="text-2xl leading-relaxed text-white">اللهُ يَجْزِيكُمْ خَيْرًا</p>
-            <p className="mt-1 text-[11px] italic text-emerald-50">“Semoga Allah membalas kebaikan Anda”</p>
+            <p className="mt-1 text-[12px] italic text-emerald-50">“Semoga Allah membalas kebaikan Anda”</p>
           </div>
         </div>
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-stone-400">
+        <p className="mt-4 text-center text-[12px] leading-relaxed text-stone-400">
           Lelang Kebaikan Cigatas · Korwil Cigatas<br />
           Tidak ada nominal uang di halaman publik. Bantuan berbentuk barang, sembako & tenaga.
         </p>

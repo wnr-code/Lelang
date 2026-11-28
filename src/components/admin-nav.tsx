@@ -40,7 +40,7 @@ export function AdminSidebar({
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 text-[13px] font-bold transition ${
+                className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 text-[14px] font-bold transition ${
                   active
                     ? "bg-gradient-to-r from-emerald-800 to-emerald-600 text-white shadow-md shadow-emerald-800/20"
                     : "text-ink hover:bg-emerald-50"
@@ -49,7 +49,7 @@ export function AdminSidebar({
                 <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-white" : "text-emerald-700"}`} strokeWidth={2} />
                 <span className="flex-1 truncate">{label}</span>
                 {badge && pendingCount > 0 && (
-                  <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white">
+                  <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-extrabold text-white">
                     {pendingCount > 9 ? "9+" : pendingCount}
                   </span>
                 )}
@@ -59,7 +59,7 @@ export function AdminSidebar({
           <form action={logoutAction}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-[13px] font-bold text-ink transition hover:bg-rose-50 hover:text-rose-600"
+              className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-[14px] font-bold text-ink transition hover:bg-rose-50 hover:text-rose-600"
             >
               <LogOut className="h-[18px] w-[18px] shrink-0 text-emerald-700" strokeWidth={2} />
               Logout
@@ -74,7 +74,7 @@ export function AdminSidebar({
             height={938}
             className="h-auto w-full"
           />
-          <p className="absolute inset-x-0 bottom-[26%] text-center text-[13px] font-bold italic leading-snug text-emerald-800">
+          <p className="absolute inset-x-0 bottom-[26%] text-center text-[14px] font-bold italic leading-snug text-emerald-800">
             Bersama dalam<br />Kebaikan
           </p>
         </div>
@@ -98,7 +98,7 @@ export function AdminNav({ pendingCount = 0 }: { pendingCount?: number }) {
             <Link
               key={href}
               href={href}
-              className={`relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-bold transition ${active ? "text-emerald-700" : "text-stone-400"}`}
+              className={`relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition ${active ? "text-emerald-700" : "text-stone-400"}`}
             >
               <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.9} />
               {short}

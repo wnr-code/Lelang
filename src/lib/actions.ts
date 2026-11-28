@@ -29,7 +29,7 @@ import {
 } from "./supabase-actions";
 import { isWorkerd } from "./storage";
 import { SUBMISSION_DECISIONS, SURPLUS_DECISION_LABEL } from "./types";
-import type { SubmissionStatus, SurplusDecision } from "./types";
+import type { SubmissionStatus, SurplusDecision, ItemCategory } from "./types";
 
 const DECISION_MESSAGE: Record<SubmissionStatus, string> = {
   pending: "Pengajuan dikembalikan ke daftar tunggu.",
@@ -136,10 +136,11 @@ export async function createEventAction(_prev: unknown, formData: FormData): Pro
   const description = String(formData.get("description") || "").trim().slice(0, 4000);
   const eventDate = String(formData.get("event_date") || "").trim();
   const location = String(formData.get("location") || "").trim().slice(0, 150);
+  const eventTime = parseEventTime(formData);
   if (!title) return fail("Nama kegiatan wajib diisi.");
 
   if (isSupabaseConfigured()) {
-    const r = await sbCreateEvent({ title, description, eventDate, location });
+    const r = await sbCreateEvent({ title, description, eventDate, location, eventTime });
     revalidateAll();
     return r;
   }
@@ -149,8 +150,8 @@ export async function createEventAction(_prev: unknown, formData: FormData): Pro
   let slug = slugify(title);
   while (db.prepare("SELECT 1 FROM events WHERE slug = ?").get(slug)) slug = `${slug}-${crypto.randomBytes(2).toString("hex")}`;
   const res = db
-    .prepare("INSERT INTO events (slug,title,description,event_date,location,status) VALUES (?,?,?,?,?,'draft')")
-    .run(slug, title, description, eventDate || null, location);
+    .prepare("INSERT INTO events (slug,title,description,event_date,location,status,event_time) VALUES (?,?,?,?,?,'draft',?)")
+    .run(slug, title, description, eventDate || null, location, eventTime);
   revalidateAll();
   return ok("Kegiatan dibuat sebagai draft.", { id: Number(res.lastInsertRowid) });
 }
@@ -162,18 +163,19 @@ export async function updateEventAction(_prev: unknown, formData: FormData): Pro
   const description = String(formData.get("description") || "").trim().slice(0, 4000);
   const eventDate = String(formData.get("event_date") || "").trim();
   const location = String(formData.get("location") || "").trim().slice(0, 150);
+  const eventTime = parseEventTime(formData);
   if (!title) return fail("Nama kegiatan wajib diisi.");
 
   if (isSupabaseConfigured()) {
-    const r = await sbUpdateEvent({ id, title, description, eventDate, location });
+    const r = await sbUpdateEvent({ id, title, description, eventDate, location, eventTime });
     revalidateAll();
     return r;
   }
 
   const { getDb } = await loadSqliteDb();
   getDb()
-    .prepare("UPDATE events SET title=?, description=?, event_date=?, location=? WHERE id=?")
-    .run(title, description, eventDate || null, location, id);
+    .prepare("UPDATE events SET title=?, description=?, event_date=?, location=?, event_time=? WHERE id=?")
+    .run(title, description, eventDate || null, location, eventTime, id);
   revalidateAll();
   return ok("Kegiatan diperbarui.");
 }
@@ -214,6 +216,20 @@ export async function deleteEventAction(id: number): Promise<ActionResult> {
 
 // ---------- Panitia: item kebutuhan ----------
 
+function parseCategory(formData: FormData): ItemCategory {
+  const raw = String(formData.get("category") || formData.get("kind") || "barang");
+  if (raw === "tenaga" || raw === "sembako" || raw === "lainnya") return raw;
+  return "barang";
+}
+
+/** Jam acara "HH:MM" (24 jam). Kosong = belum ditentukan. */
+function parseEventTime(formData: FormData): string | null {
+  const raw = String(formData.get("event_time") || "").trim();
+  const m = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (!m) return null;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
 function parseTargetQty(targetLabel: string): number | null {
   const m = targetLabel.replace(",", ".").match(/^(\d+(?:\.\d+)?)/);
   return m ? Number(m[1]) : null;
@@ -226,13 +242,14 @@ export async function addItemAction(_prev: unknown, formData: FormData): Promise
   const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 80);
   const unit = String(formData.get("unit") || "").trim().slice(0, 30);
   const note = String(formData.get("note") || "").trim().slice(0, 1000);
-  const kind = String(formData.get("kind") || "barang") === "tenaga" ? "tenaga" : "barang";
+  const category = parseCategory(formData);
+  const kind = category === "tenaga" ? "tenaga" : "barang";
   if (!name) return fail("Nama item wajib diisi.");
   if (!targetLabel) return fail("Target kebutuhan wajib diisi (mis. 40 Kg atau Secukupnya).");
   const targetQty = parseTargetQty(targetLabel);
 
   if (isSupabaseConfigured()) {
-    const r = await sbAddItem({ eventId, name, targetQty, targetLabel, unit, note, kind });
+    const r = await sbAddItem({ eventId, name, targetQty, targetLabel, unit, note, kind, category });
     revalidateAll();
     return r;
   }
@@ -240,8 +257,8 @@ export async function addItemAction(_prev: unknown, formData: FormData): Promise
   const { getDb } = await loadSqliteDb();
   const db = getDb();
   const max = (db.prepare("SELECT COALESCE(MAX(sort_order),0) AS m FROM items WHERE event_id=?").get(eventId) as { m: number }).m;
-  db.prepare("INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,kind) VALUES (?,?,?,?,?,?,?,?)")
-    .run(eventId, name, targetQty, targetLabel, unit, note, max + 1, kind);
+  db.prepare("INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,kind,category) VALUES (?,?,?,?,?,?,?,?,?)")
+    .run(eventId, name, targetQty, targetLabel, unit, note, max + 1, kind, category);
   revalidateAll();
   return ok(kind === "tenaga" ? "Kebutuhan tenaga ditambahkan." : "Item kebutuhan ditambahkan.");
 }
@@ -253,19 +270,20 @@ export async function updateItemAction(_prev: unknown, formData: FormData): Prom
   const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 80);
   const unit = String(formData.get("unit") || "").trim().slice(0, 30);
   const note = String(formData.get("note") || "").trim().slice(0, 1000);
-  const kind = String(formData.get("kind") || "barang") === "tenaga" ? "tenaga" : "barang";
+  const category = parseCategory(formData);
+  const kind = category === "tenaga" ? "tenaga" : "barang";
   if (!name || !targetLabel) return fail("Nama dan target item wajib diisi.");
   const targetQty = parseTargetQty(targetLabel);
 
   if (isSupabaseConfigured()) {
-    const r = await sbUpdateItem({ id, name, targetQty, targetLabel, unit, note, kind });
+    const r = await sbUpdateItem({ id, name, targetQty, targetLabel, unit, note, kind, category });
     revalidateAll();
     return r;
   }
 
   const { getDb } = await loadSqliteDb();
-  getDb().prepare("UPDATE items SET name=?, target_qty=?, target_label=?, unit=?, note=?, kind=? WHERE id=?")
-    .run(name, targetQty, targetLabel, unit, note, kind, id);
+  getDb().prepare("UPDATE items SET name=?, target_qty=?, target_label=?, unit=?, note=?, kind=?, category=? WHERE id=?")
+    .run(name, targetQty, targetLabel, unit, note, kind, category, id);
   revalidateAll();
   return ok("Item diperbarui.");
 }

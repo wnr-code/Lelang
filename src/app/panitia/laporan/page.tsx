@@ -67,7 +67,7 @@ async function LaporanView({ eventId, eventSlug, eventTitle }: { eventId: number
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
-              <tr className="border-b border-stone-100 text-[11px] font-extrabold uppercase tracking-wide text-stone-400">
+              <tr className="border-b border-stone-100 text-[12px] font-extrabold uppercase tracking-wide text-stone-400">
                 <th className="px-4 py-3">Barang</th>
                 <th className="px-4 py-3">Target</th>
                 <th className="px-4 py-3">Terkumpul</th>
@@ -111,7 +111,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card px-4 py-3">
       <p className="text-sm font-extrabold text-ink">{value}</p>
-      <p className="text-[11px] font-semibold text-stone-400">{label}</p>
+      <p className="text-[12px] font-semibold text-stone-400">{label}</p>
     </div>
   );
 }

@@ -57,7 +57,7 @@ async function KebutuhanView({ eventId, title, date }: { eventId: number; title:
     <div className="space-y-4">
       <div className="card px-5 py-4">
         <p className="text-sm font-extrabold text-ink">{title}</p>
-        <p className="text-[11px] text-stone-400">{formatDate(date)}</p>
+        <p className="text-[12px] text-stone-400">{formatDate(date)}</p>
         <div className="mb-1.5 mt-3 flex items-center justify-between text-xs">
           <span className="font-bold text-stone-500">Progres pemenuhan</span>
           <span className="font-extrabold text-emerald-700">{progress.fulfilled} dari {progress.total} item</span>

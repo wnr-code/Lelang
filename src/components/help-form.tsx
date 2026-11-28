@@ -129,7 +129,7 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
             <div>
               <label className="label">Jenis bantuan</label>
               <p className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-emerald-800 ring-1 ring-emerald-200">{item.name}</p>
-              {item.note && <p className="mt-1 text-[11px] text-stone-400">{item.note}</p>}
+              {item.note && <p className="mt-1 text-[12px] text-stone-400">{item.note}</p>}
             </div>
             <div>
               <label className="label" htmlFor={`avail-${item.id}`}>Waktu ketersediaan (wajib)</label>
@@ -141,7 +141,7 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
                 placeholder="mis. Sabtu, 07.00–12.00 WIB"
                 className="input"
               />
-              <p className="mt-1 flex items-center gap-1 text-[11px] text-stone-400">
+              <p className="mt-1 flex items-center gap-1 text-[12px] text-stone-400">
                 <Clock3 className="h-3 w-3" /> Tulis hari & jam agar panitia bisa mengatur jadwal.
               </p>
             </div>
@@ -170,7 +170,7 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
                 </select>
               </div>
             </div>
-            <p className="-mt-1 text-[11px] text-stone-400">
+            <p className="-mt-1 text-[12px] text-stone-400">
               Target: {item.target_label}. Tidak harus penuh — sekecil apa pun berarti. Contoh: Beras 5 kg, Minyak goreng 2 liter, Kopi 2 dus.
             </p>
           </>
@@ -202,14 +202,14 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
             placeholder="mis. 0812xxxx (untuk follow up panitia)"
             className="input"
           />
-          <p className="mt-1 text-[11px] text-stone-400">Wajib diisi agar panitia bisa menghubungimu. Hanya terlihat oleh panitia.</p>
+          <p className="mt-1 text-[12px] text-stone-400">Wajib diisi agar panitia bisa menghubungimu. Hanya terlihat oleh panitia.</p>
         </div>
 
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
         <button type="submit" disabled={pending} className="btn-primary w-full">
           {pending ? "Mengirim..." : "Kirim Pengajuan"}
         </button>
-        <p className="text-center text-[11px] text-stone-400">
+        <p className="text-center text-[12px] text-stone-400">
           Pengajuan belum dihitung sebagai diterima sampai panitia memverifikasi.
         </p>
       </div>

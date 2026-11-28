@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Moon, Clock3, MapPin, Mic, CalendarDays, ChevronRight, Megaphone, Archive } from "lucide-react";
-import { PublicHeader, PublicFooter, formatDate, relativeTime } from "@/components/ui";
+import { PublicFooter, formatDate, relativeTime } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 import { getActiveEvents, getArchivedEvents } from "@/lib/queries";
 import { ROUTINE, nextMalamJumatKe4, formatRoutineDate } from "@/lib/routine";
 
@@ -18,7 +19,7 @@ export default async function InformasiPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <PublicHeader notif={events.length} />
+      <PublicHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-5">
         <div className="mb-5 flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
@@ -78,8 +79,8 @@ export default async function InformasiPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-extrabold text-ink">{ev.title}</p>
-                    <p className="text-[11px] text-stone-500">{formatDate(ev.event_date)}{ev.location ? ` · ${ev.location}` : ""}</p>
-                    <p className="mt-0.5 text-[10px] text-stone-400">Diumumkan {relativeTime(ev.created_at)}</p>
+                    <p className="text-[12px] text-stone-500">{formatDate(ev.event_date)}{ev.location ? ` · ${ev.location}` : ""}</p>
+                    <p className="mt-0.5 text-[11px] text-stone-400">Diumumkan {relativeTime(ev.created_at)}</p>
                   </div>
                   <span className="chip shrink-0 bg-emerald-100 text-emerald-800">Aktif</span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" />
@@ -93,7 +94,7 @@ export default async function InformasiPage() {
         <section className="mt-7">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[15px] font-extrabold text-ink">Kegiatan Terdahulu</h2>
-            <Link href="/arsip" className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700">
+            <Link href="/arsip" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
               Semua arsip <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -106,7 +107,7 @@ export default async function InformasiPage() {
                   <Archive className="h-4 w-4 shrink-0 text-stone-400" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-ink">{ev.title}</p>
-                    <p className="text-[11px] text-stone-400">{formatDate(ev.event_date)}</p>
+                    <p className="text-[12px] text-stone-400">{formatDate(ev.event_date)}</p>
                   </div>
                 </Link>
               ))}

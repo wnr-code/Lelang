@@ -68,6 +68,10 @@ export const TABLES = {
   fulfillments: "fulfillments",
   surplus: "surplus",
   photos: "photos",
+  push_subscriptions: "push_subscriptions",
+  event_rsvps: "event_rsvps",
+  push_reminders: "push_reminders",
+  app_settings: "app_settings",
 } as const;
 
 /** Bucket Storage publik untuk foto kegiatan. */

@@ -4,7 +4,8 @@ import {
   Sparkles, HandHeart, Package, Users, ShieldCheck, Archive, Recycle, Ban,
   UserRound, ClipboardList, ArrowRight, HelpCircle, CheckCircle2, FileDown, Heart,
 } from "lucide-react";
-import { PublicHeader, PublicFooter } from "@/components/ui";
+import { PublicFooter } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
 
 export const metadata = {
   title: "Tentang",

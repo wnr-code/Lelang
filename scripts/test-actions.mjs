@@ -25,8 +25,13 @@ resetDb();
 getDb();
 check("seed: 2 kegiatan", (await Q.getAllEvents()).length === 2);
 const seedItems = await Q.getItemsWithStatus(1);
-check("seed: 8 kebutuhan barang", seedItems.filter((i) => i.kind === "barang").length === 8);
-check("seed: 3 kebutuhan tenaga", seedItems.filter((i) => i.kind === "tenaga").length === 3);
+check("seed: 10 kebutuhan barang", seedItems.filter((i) => i.kind === "barang").length === 10);
+check("seed: 5 kebutuhan tenaga", seedItems.filter((i) => i.kind === "tenaga").length === 5);
+check("seed: kategori sembako", seedItems.find((i) => i.name === "Beras").category === "sembako");
+check("seed: kategori barang", seedItems.find((i) => i.name === "Kantong Plastik").category === "barang");
+check("seed: kategori tenaga", seedItems.find((i) => i.kind === "tenaga").category === "tenaga");
+check("seed: kategori lainnya", seedItems.find((i) => i.name === "Kebutuhan Lainnya").category === "lainnya");
+check("seed: juru parkir ada", seedItems.some((i) => i.name === "Juru Parkir"));
 
 console.log("== Auth ==");
 let r = await A.loginAction(null, fd({ password: "salah" }));
@@ -244,6 +249,102 @@ for (const scope of ["all", "collected", "pending"]) {
   const { PDFDocument } = await import("pdf-lib");
   const doc = await PDFDocument.load(await E.generatePdf(all));
   check("PDF bisa dibaca ulang", doc.getPageCount() >= 1);
+}
+
+
+console.log("== Fase 3: kategori, jam acara, countdown ==");
+const ET = await import("../src/lib/event-time.ts");
+r = await A.addItemAction(null, fd({ event_id: 1, name: "Juru Parkir Tambahan", target_label: "2 Orang", unit: "Orang", category: "tenaga" }));
+check("tambah item kategori tenaga", r.ok === true);
+{
+  const it = (await Q.getItemsWithStatus(1)).find((i) => i.name === "Juru Parkir Tambahan");
+  check("kind mengikuti kategori tenaga", it.kind === "tenaga" && it.category === "tenaga");
+}
+r = await A.addItemAction(null, fd({ event_id: 1, name: "Teh Celup", target_label: "5 Dus", unit: "Dus", category: "sembako" }));
+check("tambah item kategori sembako", r.ok === true);
+{
+  const it = (await Q.getItemsWithStatus(1)).find((i) => i.name === "Teh Celup");
+  check("kind barang untuk sembako", it.kind === "barang" && it.category === "sembako");
+}
+r = await A.createEventAction(null, fd({ title: "Uji Jam Acara", description: "x", event_date: "2026-12-23", event_time: "19:00", location: "Masjid" }));
+check("buat acara dengan jam", r.ok === true);
+{
+  const ev = (await Q.getAllEvents()).find((e) => e.title === "Uji Jam Acara");
+  check("event_time tersimpan 19:00", ev.event_time === "19:00");
+  const starts = ET.eventStartsAt(ev);
+  check("eventStartsAt WIB", starts.toISOString() === "2026-12-23T12:00:00.000Z");
+  const remind = ET.reminderAt(starts);
+  check("pengingat 4 jam sebelum (15:00 WIB)", remind.toISOString() === "2026-12-23T08:00:00.000Z");
+  const c = ET.countdownParts(starts, new Date("2026-12-23T07:00:00.000Z"));
+  check("countdown 5 jam", c.hours === 5 && c.days === 0 && c.past === false);
+  check("formatEventTime", ET.formatEventTime("19:00") === "19.00 WIB");
+  r = await A.updateEventAction(null, fd({ id: ev.id, title: "Uji Jam Acara", description: "x", event_date: "2026-12-23", event_time: "20:30", location: "Masjid" }));
+  check("ubah jam acara", r.ok === true && (await Q.getEventById(ev.id)).event_time === "20:30");
+}
+
+console.log("== Fase 3: push, RSVP, pengingat ==");
+const P = await import("../src/lib/push.ts");
+const W = await import("../src/lib/webpush.ts");
+const vapid1 = await P.getVapidKeys();
+const vapid2 = await P.getVapidKeys();
+check("kunci VAPID dibuat & stabil", vapid1.publicKey.length > 40 && vapid1.publicKey === vapid2.publicKey);
+const cron1 = await P.getCronSecret();
+const cron2 = await P.getCronSecret();
+check("cron secret stabil", cron1.length >= 32 && cron1 === cron2);
+const fakeSub = { endpoint: "https://push.example.com/sub-1", keys: { p256dh: "BPx" + "A".repeat(80), auth: "AUTH1234567890ab" } };
+await P.saveSubscription(fakeSub, "Ikhwan Uji");
+check("langganan tersimpan", (await P.listSubscriptions()).some((s) => s.endpoint === fakeSub.endpoint));
+await P.saveSubscription(fakeSub, "Nama Baru");
+check("langganan upsert (tidak ganda)", (await P.listSubscriptions()).filter((s) => s.endpoint === fakeSub.endpoint).length === 1);
+await P.recordRsvp({ eventId: 1, endpoint: fakeSub.endpoint, nickname: "Ikhwan Uji", answer: "hadir" });
+await P.recordRsvp({ eventId: 1, endpoint: fakeSub.endpoint, nickname: "Ikhwan Uji", answer: "tidak" });
+{
+  const sum = await P.getRsvpSummary(1);
+  check("RSVP upsert jawaban terakhir", sum.tidak === 1 && sum.hadir === 0);
+  check("RSVP recent ada", sum.recent.length === 1 && sum.recent[0].nickname === "Ikhwan Uji");
+}
+await P.recordRsvp({ eventId: 1, nickname: "Akhwat Uji", answer: "hadir" });
+check("RSVP manual tanpa endpoint", (await P.getRsvpSummary(1)).hadir === 1);
+await P.removeSubscription(fakeSub.endpoint);
+check("langganan dihapus", !(await P.listSubscriptions()).some((s) => s.endpoint === fakeSub.endpoint));
+{
+  const due = await P.sendDueReminders(new Date("2026-12-23T08:30:00.000Z"));
+  check("sendDueReminders berjalan tanpa error", typeof due.sent === "number" && typeof due.checked === "number");
+}
+const N = await import("../src/lib/notifications.ts");
+{
+  const list = await N.getMemberNotifications();
+  check("notifikasi anggota ada", list.length >= 2);
+  check("notifikasi punya judul+desc+waktu", list.every((n) => n.title && n.desc && n.timeLabel));
+  check("badge jumlah nyata", (await N.getMemberNotifCount()) >= 1);
+}
+
+console.log("== Fase 3: enkripsi Web Push (RFC 8291) ==");
+{
+  const clientKp = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const clientPub = new Uint8Array(await crypto.subtle.exportKey("raw", clientKp.publicKey));
+  const auth = crypto.getRandomValues(new Uint8Array(16));
+  const sub = { endpoint: "https://push.example.com/x", keys: { p256dh: W.bytesToB64url(clientPub), auth: W.bytesToB64url(auth) } };
+  const payload = JSON.stringify({ title: "Uji", body: "Hadir?", eventId: 1 });
+  const body = await W.encryptPayload(sub, payload);
+  const salt = body.slice(0, 16);
+  const idlen = body[20];
+  const serverPub = body.slice(21, 21 + idlen);
+  const ciphertext = body.slice(21 + idlen);
+  const serverKey = await crypto.subtle.importKey("raw", serverPub, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: serverKey }, clientKp.privateKey, 256));
+  const enc2 = new TextEncoder();
+  const concat2 = (...ps) => { const n = ps.reduce((a, p) => a + p.length, 0); const o = new Uint8Array(n); let k = 0; for (const p of ps) { o.set(p, k); k += p.length; } return o; };
+  const hkdf2 = async (s, ikm, info, len) => { const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]); return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: s, info }, k, len * 8)); };
+  const ikm = await hkdf2(auth, shared, concat2(enc2.encode("WebPush: info\0"), clientPub, serverPub), 32);
+  const cek = await hkdf2(salt, ikm, enc2.encode("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = await hkdf2(salt, ikm, enc2.encode("Content-Encoding: nonce\0"), 12);
+  const aes = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["decrypt"]);
+  const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce, tagLength: 128 }, aes, ciphertext));
+  const text = new TextDecoder().decode(plain.slice(0, -1));
+  check("payload terenkripsi bisa didekripsi klien", text === payload && plain[plain.length - 1] === 2);
+  const keys = await W.generateVapidKeys();
+  check("VAPID public key 65 byte", W.b64urlToBytes(keys.publicKey).length === 65);
 }
 
 console.log("== Logout ==");
