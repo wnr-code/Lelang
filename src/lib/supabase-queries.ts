@@ -156,6 +156,7 @@ export async function sbGetFulfillmentsForEvent(eventId: number): Promise<Fulfil
 
 export type SubmissionJoined = SubmissionRow & {
   item_name: string;
+  item_kind: string;
   event_title: string;
   event_slug: string;
 };
@@ -163,7 +164,7 @@ export type SubmissionJoined = SubmissionRow & {
 export async function sbGetSubmissions(eventId?: number, status?: string): Promise<SubmissionJoined[]> {
   let q = getSupabase()
     .from(TABLES.submissions)
-    .select("*, items(name), events(title, slug)");
+    .select("*, items(name, kind), events(title, slug)");
   if (eventId) q = q.eq("event_id", eventId);
   if (status && status !== "all") q = q.eq("status", status);
   const { data, error } = await q;
@@ -175,13 +176,14 @@ export async function sbGetSubmissions(eventId?: number, status?: string): Promi
     return {
       ...mapSubmission(r),
       item_name: String(item.name ?? ""),
+      item_kind: item.kind === "tenaga" ? "tenaga" : "barang",
       event_title: String(event.title ?? ""),
       event_slug: String(event.slug ?? ""),
     };
   });
   mapped.sort((a, b) => {
-    const pa = a.status === "pending" ? 0 : 1;
-    const pb = b.status === "pending" ? 0 : 1;
+    const pa = a.status === "pending" || a.status === "needs_confirmation" ? 0 : 1;
+    const pb = b.status === "pending" || b.status === "needs_confirmation" ? 0 : 1;
     if (pa !== pb) return pa - pb;
     if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1;
     return b.id - a.id;
@@ -191,8 +193,9 @@ export async function sbGetSubmissions(eventId?: number, status?: string): Promi
 
 export type SubmissionTracked = SubmissionRow & {
   item_name: string;
+  item_kind: string;
   target_label: string;
-  unit: string;
+  item_unit: string;
   event_title: string;
   event_slug: string;
   event_status: string;
@@ -203,7 +206,7 @@ export async function sbGetSubmissionByCode(code: string): Promise<SubmissionTra
   const sb = getSupabase();
   const { data, error } = await sb
     .from(TABLES.submissions)
-    .select("*, items(name, target_label, unit), events(title, slug, status)")
+    .select("*, items(name, kind, target_label, unit), events(title, slug, status)")
     .eq("track_code", code)
     .maybeSingle();
   throwIfError(error, "getSubmissionByCode");
@@ -223,8 +226,9 @@ export async function sbGetSubmissionByCode(code: string): Promise<SubmissionTra
   return {
     ...base,
     item_name: String(item.name ?? ""),
+    item_kind: item.kind === "tenaga" ? "tenaga" : "barang",
     target_label: String(item.target_label ?? ""),
-    unit: String(item.unit ?? ""),
+    item_unit: String(item.unit ?? ""),
     event_title: String(event.title ?? ""),
     event_slug: String(event.slug ?? ""),
     event_status: String(event.status ?? ""),

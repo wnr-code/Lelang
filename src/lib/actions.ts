@@ -28,6 +28,16 @@ import {
   sbDeletePhoto,
 } from "./supabase-actions";
 import { isWorkerd } from "./storage";
+import { SUBMISSION_DECISIONS, SURPLUS_DECISION_LABEL } from "./types";
+import type { SubmissionStatus, SurplusDecision } from "./types";
+
+const DECISION_MESSAGE: Record<SubmissionStatus, string> = {
+  pending: "Pengajuan dikembalikan ke daftar tunggu.",
+  approved: "Pengajuan disetujui. Catat penerimaan di menu Kelola Barang.",
+  needs_confirmation: "Pengajuan ditandai perlu konfirmasi. Hubungi anggota lewat WhatsApp.",
+  rejected: "Pengajuan ditolak.",
+  done: "Pengajuan selesai — bantuan tercatat sudah diterima.",
+};
 
 export type ActionResult = { ok: true; message?: string; code?: string; id?: number } | { ok: false; error: string };
 
@@ -65,6 +75,8 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
   const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 80);
   const message = String(formData.get("message") || "").trim().slice(0, 2000);
   const contact = String(formData.get("contact") || "").trim().slice(0, 80);
+  const unit = String(formData.get("unit") || "").trim().slice(0, 30);
+  const availability = String(formData.get("availability") || "").trim().slice(0, 150);
 
   if (!nickname) return fail("Nama panggilan wajib diisi.");
   if (!contact) return fail("Nomor WhatsApp wajib diisi agar panitia bisa follow up.");
@@ -81,12 +93,20 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
     qty = Number(qtyRaw.replace(",", "."));
     if (!Number.isFinite(qty) || qty <= 0) return fail("Jumlah kesediaan tidak valid.");
   }
-  if (qty == null && !qtyLabel) return fail("Isi jumlah kesediaan (angka atau keterangan singkat).");
+  const isTenaga = item.kind === "tenaga";
+  if (isTenaga) {
+    if (!availability) return fail("Waktu ketersediaan wajib diisi (mis. Sabtu, 07.00–12.00 WIB).");
+  } else if (qty == null && !qtyLabel) {
+    return fail("Isi jumlah kesediaan (angka atau keterangan singkat).");
+  }
 
-  const label = qtyLabel || (qty != null ? `${qty}${item.unit ? " " + item.unit : ""}` : "");
+  const finalUnit = unit || item.unit || "";
+  const label =
+    qtyLabel ||
+    (qty != null ? `${qty}${finalUnit ? " " + finalUnit : ""}` : isTenaga ? "Siap membantu" : "");
 
   if (isSupabaseConfigured()) {
-    const r = await sbSubmitHelp({ eventId: item.event_id, itemId, nickname, qty, label, message, contact });
+    const r = await sbSubmitHelp({ eventId: item.event_id, itemId, nickname, qty, label, message, contact, unit: finalUnit, availability });
     revalidatePath(`/kegiatan/${event.slug}`);
     revalidatePath("/panitia/pengajuan");
     return r;
@@ -98,10 +118,10 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
   while (db.prepare("SELECT 1 FROM submissions WHERE track_code = ?").get(code)) code = newTrackCode();
   const res = db
     .prepare(
-      `INSERT INTO submissions (event_id,item_id,nickname,qty,qty_label,message,contact,status,track_code)
-       VALUES (?,?,?,?,?,?,?,'pending',?)`
+      `INSERT INTO submissions (event_id,item_id,nickname,qty,qty_label,unit,availability,message,contact,status,track_code)
+       VALUES (?,?,?,?,?,?,?,?,?,'pending',?)`
     )
-    .run(item.event_id, itemId, nickname, qty, label, message, contact, code);
+    .run(item.event_id, itemId, nickname, qty, label, finalUnit, availability, message, contact, code);
 
   revalidatePath(`/kegiatan/${event.slug}`);
   revalidatePath("/panitia/pengajuan");
@@ -206,12 +226,13 @@ export async function addItemAction(_prev: unknown, formData: FormData): Promise
   const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 80);
   const unit = String(formData.get("unit") || "").trim().slice(0, 30);
   const note = String(formData.get("note") || "").trim().slice(0, 1000);
+  const kind = String(formData.get("kind") || "barang") === "tenaga" ? "tenaga" : "barang";
   if (!name) return fail("Nama item wajib diisi.");
   if (!targetLabel) return fail("Target kebutuhan wajib diisi (mis. 40 Kg atau Secukupnya).");
   const targetQty = parseTargetQty(targetLabel);
 
   if (isSupabaseConfigured()) {
-    const r = await sbAddItem({ eventId, name, targetQty, targetLabel, unit, note });
+    const r = await sbAddItem({ eventId, name, targetQty, targetLabel, unit, note, kind });
     revalidateAll();
     return r;
   }
@@ -219,10 +240,10 @@ export async function addItemAction(_prev: unknown, formData: FormData): Promise
   const { getDb } = await loadSqliteDb();
   const db = getDb();
   const max = (db.prepare("SELECT COALESCE(MAX(sort_order),0) AS m FROM items WHERE event_id=?").get(eventId) as { m: number }).m;
-  db.prepare("INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order) VALUES (?,?,?,?,?,?,?)")
-    .run(eventId, name, targetQty, targetLabel, unit, note, max + 1);
+  db.prepare("INSERT INTO items (event_id,name,target_qty,target_label,unit,note,sort_order,kind) VALUES (?,?,?,?,?,?,?,?)")
+    .run(eventId, name, targetQty, targetLabel, unit, note, max + 1, kind);
   revalidateAll();
-  return ok("Item kebutuhan ditambahkan.");
+  return ok(kind === "tenaga" ? "Kebutuhan tenaga ditambahkan." : "Item kebutuhan ditambahkan.");
 }
 
 export async function updateItemAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
@@ -232,18 +253,19 @@ export async function updateItemAction(_prev: unknown, formData: FormData): Prom
   const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 80);
   const unit = String(formData.get("unit") || "").trim().slice(0, 30);
   const note = String(formData.get("note") || "").trim().slice(0, 1000);
+  const kind = String(formData.get("kind") || "barang") === "tenaga" ? "tenaga" : "barang";
   if (!name || !targetLabel) return fail("Nama dan target item wajib diisi.");
   const targetQty = parseTargetQty(targetLabel);
 
   if (isSupabaseConfigured()) {
-    const r = await sbUpdateItem({ id, name, targetQty, targetLabel, unit, note });
+    const r = await sbUpdateItem({ id, name, targetQty, targetLabel, unit, note, kind });
     revalidateAll();
     return r;
   }
 
   const { getDb } = await loadSqliteDb();
-  getDb().prepare("UPDATE items SET name=?, target_qty=?, target_label=?, unit=?, note=? WHERE id=?")
-    .run(name, targetQty, targetLabel, unit, note, id);
+  getDb().prepare("UPDATE items SET name=?, target_qty=?, target_label=?, unit=?, note=?, kind=? WHERE id=?")
+    .run(name, targetQty, targetLabel, unit, note, kind, id);
   revalidateAll();
   return ok("Item diperbarui.");
 }
@@ -276,8 +298,9 @@ export async function deleteItemAction(id: number): Promise<ActionResult> {
 
 // ---------- Panitia: keputusan pengajuan ----------
 
-export async function decideSubmissionAction(id: number, decision: "approved" | "rejected", note: string): Promise<ActionResult> {
+export async function decideSubmissionAction(id: number, decision: SubmissionStatus, note: string): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
+  if (!SUBMISSION_DECISIONS.includes(decision)) return fail("Status keputusan tidak valid.");
   if (isSupabaseConfigured()) {
     const r = await sbDecideSubmission(id, decision, note);
     revalidateAll();
@@ -291,17 +314,26 @@ export async function decideSubmissionAction(id: number, decision: "approved" | 
   db.prepare("UPDATE submissions SET status=?, decided_at=datetime('now'), decision_note=? WHERE id=?")
     .run(decision, note.slice(0, 1000), id);
 
+  const existing = db.prepare("SELECT id FROM fulfillments WHERE submission_id=?").get(id) as { id: number } | undefined;
   if (decision === "approved") {
-    const existing = db.prepare("SELECT 1 FROM fulfillments WHERE submission_id=?").get(id);
+    // Disetujui = kesediaan dicatat, BELUM diterima. Verifikasi tetap di menu Barang.
     if (!existing) {
       db.prepare("INSERT INTO fulfillments (item_id,submission_id,person_name,qty,qty_label) VALUES (?,?,?,?,?)")
         .run(sub.item_id, id, sub.nickname, sub.qty, sub.qty_label);
     }
-  } else {
+  } else if (decision === "rejected") {
     db.prepare("DELETE FROM fulfillments WHERE submission_id=? AND received=0").run(id);
+  } else if (decision === "done") {
+    // Selesai = panitia sudah memverifikasi penerimaan.
+    if (!existing) {
+      db.prepare("INSERT INTO fulfillments (item_id,submission_id,person_name,qty,qty_label,received,received_at) VALUES (?,?,?,?,?,1,datetime('now'))")
+        .run(sub.item_id, id, sub.nickname, sub.qty, sub.qty_label);
+    } else {
+      db.prepare("UPDATE fulfillments SET received=1, received_at=COALESCE(received_at, datetime('now')) WHERE id=?").run(existing.id);
+    }
   }
   revalidateAll();
-  return ok(decision === "approved" ? "Pengajuan disetujui." : "Pengajuan ditolak.");
+  return ok(DECISION_MESSAGE[decision]);
 }
 
 // ---------- Panitia: barang & penanggung jawab ----------
@@ -344,7 +376,14 @@ export async function toggleReceivedAction(id: number, received: boolean): Promi
     return r;
   }
   const { getDb } = await loadSqliteDb();
-  getDb().prepare("UPDATE fulfillments SET received=? WHERE id=?").run(received ? 1 : 0, id);
+  const db = getDb();
+  const f = db.prepare("SELECT submission_id FROM fulfillments WHERE id=?").get(id) as { submission_id: number | null } | undefined;
+  db.prepare("UPDATE fulfillments SET received=?, received_at=? WHERE id=?")
+    .run(received ? 1 : 0, received ? new Date().toISOString().slice(0, 19).replace("T", " ") : null, id);
+  if (f?.submission_id) {
+    db.prepare("UPDATE submissions SET status=? WHERE id=? AND status IN ('approved','done')")
+      .run(received ? "done" : "approved", f.submission_id);
+  }
   revalidateAll();
   return ok(received ? "Barang ditandai diterima." : "Tanda diterima dibatalkan.");
 }
@@ -392,6 +431,7 @@ export async function addSurplusAction(_prev: unknown, formData: FormData): Prom
   const picName = String(formData.get("pic_name") || "").trim().slice(0, 80);
   const outcome = String(formData.get("outcome") || "").trim().slice(0, 1000);
   if (!itemName) return fail("Nama barang wajib diisi.");
+  if (!SURPLUS_DECISION_LABEL[decision as SurplusDecision]) return fail("Pilihan pengelolaan sisa tidak valid.");
 
   let qty: number | null = null;
   if (qtyRaw) {
@@ -424,6 +464,7 @@ export async function updateSurplusAction(_prev: unknown, formData: FormData): P
   const decisionNote = String(formData.get("decision_note") || "").trim().slice(0, 1000);
   const picName = String(formData.get("pic_name") || "").trim().slice(0, 80);
   const outcome = String(formData.get("outcome") || "").trim().slice(0, 1000);
+  if (!SURPLUS_DECISION_LABEL[decision as SurplusDecision]) return fail("Pilihan pengelolaan sisa tidak valid.");
 
   if (isSupabaseConfigured()) {
     const r = await sbUpdateSurplus({ id, decision, decisionNote, picName, outcome });

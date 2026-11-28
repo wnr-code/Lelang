@@ -54,6 +54,8 @@ export default async function PanitiaPengaturanPage() {
         <ul className="space-y-1.5 text-[12px] leading-relaxed text-stone-600">
           <li>• Nomor WhatsApp pengaju <b>wajib</b> dan <b>hanya terlihat panitia</b>.</li>
           <li>• Pengajuan anggota <b>belum</b> dianggap diterima sampai panitia memverifikasi di menu Kelola Barang.</li>
+          <li>• Status pengajuan: Menunggu konfirmasi → Disetujui / Perlu konfirmasi / Ditolak → Selesai.</li>
+          <li>• Sisa barang: Disimpan, Digunakan untuk kegiatan berikutnya, Ditukar, Dijual kembali, Disalurkan.</li>
           <li>• Foto dokumentasi maksimal <b>2 MB</b>, dikompres otomatis ke WebP.</li>
           <li>• Tidak ada nominal uang yang ditampilkan ke publik.</li>
           <li>• Sisa barang dicatat permanen dan tidak hilang dari riwayat.</li>

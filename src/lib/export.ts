@@ -9,10 +9,14 @@ export type ExportFormat = "pdf" | "xlsx";
 export interface ExportRow {
   no: number;
   name: string;
+  unit: string;
   target: string;
+  submitted: string;
+  approved: string;
   collected: string;
   remaining: string;
   status: string;
+  receivedAt: string;
   pic: string;
 }
 
@@ -62,11 +66,15 @@ export async function buildExportData(eventId: number, scope: ExportScope): Prom
     }
     return {
       no: idx + 1,
-      name: i.name,
+      name: i.kind === "tenaga" ? `${i.name} (tenaga)` : i.name,
+      unit: i.unit || "—",
       target: i.target_label,
+      submitted: String(i.submitted_count),
+      approved: String(i.approved_count),
       collected: i.received_label || "0",
       remaining,
       status: ITEM_STATUS_LABEL[i.status],
+      receivedAt: i.received_at ? fmtDate(i.received_at.slice(0, 10)) : "—",
       pic: i.pic_name || "—",
     };
   });
@@ -98,10 +106,14 @@ export async function generateExcel(data: ExportData): Promise<Buffer> {
   ws.columns = [
     { key: "no", width: 5 },
     { key: "name", width: 26 },
-    { key: "target", width: 18 },
-    { key: "collected", width: 18 },
-    { key: "remaining", width: 16 },
+    { key: "unit", width: 10 },
+    { key: "target", width: 16 },
+    { key: "submitted", width: 11 },
+    { key: "approved", width: 11 },
+    { key: "collected", width: 16 },
+    { key: "remaining", width: 14 },
     { key: "status", width: 16 },
+    { key: "receivedAt", width: 18 },
     { key: "pic", width: 22 },
   ];
 
@@ -109,28 +121,28 @@ export async function generateExcel(data: ExportData): Promise<Buffer> {
   const cream = "FFFAF6EE";
 
   // Judul
-  ws.mergeCells("A1:G1");
+  ws.mergeCells("A1:K1");
   const title = ws.getCell("A1");
   title.value = "LELANG KEBAIKAN CIGATAS";
   title.font = { bold: true, size: 16, color: { argb: emerald } };
   title.alignment = { vertical: "middle", horizontal: "left" };
   ws.getRow(1).height = 26;
 
-  ws.mergeCells("A2:G2");
+  ws.mergeCells("A2:K2");
   ws.getCell("A2").value = `${data.event.title} — ${data.scopeLabel}`;
   ws.getCell("A2").font = { bold: true, size: 12 };
 
-  ws.mergeCells("A3:G3");
+  ws.mergeCells("A3:K3");
   ws.getCell("A3").value = `Tanggal kegiatan: ${fmtDate(data.event.event_date)}${data.event.location ? " · " + data.event.location : ""}`;
   ws.getCell("A3").font = { size: 10, color: { argb: "FF78716C" } };
 
-  ws.mergeCells("A4:G4");
+  ws.mergeCells("A4:K4");
   ws.getCell("A4").value = `Ringkasan: ${data.summary.fulfilled} terpenuhi · ${data.summary.process} dalam proses · ${data.summary.open} dibuka (dari ${data.summary.total} item)`;
   ws.getCell("A4").font = { size: 10, color: { argb: "FF78716C" } };
 
   // Header tabel (baris 6)
   const header = ws.getRow(6);
-  header.values = ["No", "Barang", "Target", "Terkumpul", "Kekurangan", "Status", "Penanggung Jawab"];
+  header.values = ["No", "Barang / Tenaga", "Satuan", "Target", "Pengajuan", "Disetujui", "Diterima", "Kekurangan", "Status", "Tgl Penerimaan", "Penanggung Jawab"];
   header.eachCell((cell) => {
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: emerald } };
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
@@ -141,21 +153,21 @@ export async function generateExcel(data: ExportData): Promise<Buffer> {
 
   // Baris data
   data.rows.forEach((r, idx) => {
-    const row = ws.addRow([r.no, r.name, r.target, r.collected, r.remaining, r.status, r.pic]);
+    const row = ws.addRow([r.no, r.name, r.unit, r.target, r.submitted, r.approved, r.collected, r.remaining, r.status, r.receivedAt, r.pic]);
     row.eachCell((cell) => {
       cell.alignment = { vertical: "middle", wrapText: true };
       cell.border = { bottom: { style: "hair", color: { argb: "FFE7E5E4" } } };
       if (idx % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cream } };
     });
     row.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
-    const statusCell = row.getCell(6);
+    const statusCell = row.getCell(9);
     const color = r.status === "Terpenuhi" ? "FF047857" : r.status === "Dalam proses" ? "FFB45309" : "FF0369A1";
     statusCell.font = { bold: true, color: { argb: color } };
     row.height = 20;
   });
 
   if (data.rows.length === 0) {
-    ws.mergeCells(`A7:G7`);
+    ws.mergeCells(`A7:K7`);
     ws.getCell("A7").value = "Tidak ada data untuk pilihan ini.";
     ws.getCell("A7").font = { italic: true, color: { argb: "FF78716C" } };
   }
@@ -163,7 +175,7 @@ export async function generateExcel(data: ExportData): Promise<Buffer> {
   // Catatan kaki
   const footRow = ws.addRow([]);
   const footIdx = footRow.number + 1;
-  ws.mergeCells(`A${footIdx}:G${footIdx}`);
+  ws.mergeCells(`A${footIdx}:K${footIdx}`);
   ws.getCell(`A${footIdx}`).value = `Dibuat: ${data.generatedAt} · Satu Kepedulian, Banyak Kebaikan · Tidak memuat nominal uang`;
   ws.getCell(`A${footIdx}`).font = { size: 9, italic: true, color: { argb: "FFA8A29E" } };
 
@@ -197,14 +209,19 @@ export async function generatePdf(data: ExportData): Promise<Buffer> {
   const M = 40;
   const pageW = W - M * 2;
 
+  const fixed = [26, 132, 46, 78, 52, 52, 78, 60, 78, 80];
   const cols = [
-    { label: "No", w: 28, align: "center" as const },
-    { label: "Barang", w: 150, align: "left" as const },
-    { label: "Target", w: 100, align: "left" as const },
-    { label: "Terkumpul", w: 100, align: "left" as const },
-    { label: "Kurang", w: 80, align: "left" as const },
-    { label: "Status", w: 95, align: "left" as const },
-    { label: "Penanggung Jawab", w: pageW - 28 - 150 - 100 - 100 - 80 - 95, align: "left" as const },
+    { label: "No", w: fixed[0], align: "center" as const },
+    { label: "Barang / Tenaga", w: fixed[1], align: "left" as const },
+    { label: "Satuan", w: fixed[2], align: "left" as const },
+    { label: "Target", w: fixed[3], align: "left" as const },
+    { label: "Ajuan", w: fixed[4], align: "center" as const },
+    { label: "Setuju", w: fixed[5], align: "center" as const },
+    { label: "Diterima", w: fixed[6], align: "left" as const },
+    { label: "Kurang", w: fixed[7], align: "left" as const },
+    { label: "Status", w: fixed[8], align: "left" as const },
+    { label: "Tgl Terima", w: fixed[9], align: "left" as const },
+    { label: "Penanggung Jawab", w: pageW - fixed.reduce((a, b) => a + b, 0), align: "left" as const },
   ];
 
   // Potong teks agar muat dalam kolom (pdf-lib tidak auto-truncate).
@@ -269,10 +286,10 @@ export async function generatePdf(data: ExportData): Promise<Buffer> {
       drawTableHeader();
     }
     if (idx % 2 === 1) rect(M, y, pageW, rowH, cream);
-    const vals = [String(r.no), r.name, r.target, r.collected, r.remaining, r.status, r.pic];
+    const vals = [String(r.no), r.name, r.unit, r.target, r.submitted, r.approved, r.collected, r.remaining, r.status, r.receivedAt, r.pic];
     let x = M;
     cols.forEach((c, ci) => {
-      const isStatus = ci === 5;
+      const isStatus = ci === 8;
       const color = isStatus
         ? r.status === "Terpenuhi" ? rgb(0.016, 0.47, 0.34) : r.status === "Dalam proses" ? rgb(0.706, 0.325, 0.035) : rgb(0.012, 0.41, 0.63)
         : ink;

@@ -24,7 +24,9 @@ console.log("== Reset & seed ==");
 resetDb();
 getDb();
 check("seed: 2 kegiatan", (await Q.getAllEvents()).length === 2);
-check("seed: 8 item kegiatan aktif", (await Q.getItemsWithStatus(1)).length === 8);
+const seedItems = await Q.getItemsWithStatus(1);
+check("seed: 8 kebutuhan barang", seedItems.filter((i) => i.kind === "barang").length === 8);
+check("seed: 3 kebutuhan tenaga", seedItems.filter((i) => i.kind === "tenaga").length === 3);
 
 console.log("== Auth ==");
 let r = await A.loginAction(null, fd({ password: "salah" }));
@@ -72,6 +74,10 @@ check("tetapkan PJ", r.ok === true);
 const item6 = (await Q.getItemsWithStatus(1)).find((i) => i.id === 6);
 check("PJ tercatat", item6.pic_name === "Teh Uji");
 check("received_qty bertambah", item6.received_qty >= 15);
+check("jumlah pengajuan tercatat", item6.submitted_count >= 1);
+check("jumlah disetujui tercatat", item6.approved_count >= 1);
+check("tanggal penerimaan tercatat", item6.received_at !== null);
+check("status pengajuan jadi selesai setelah diverifikasi", (await Q.getSubmissionByCode(subCode)).status === "done");
 
 console.log("== Panitia: tolak pengajuan lain ==");
 const pendingAir = (await Q.getSubmissions(1, "pending")).find((s) => s.item_name === "Air Mineral");
@@ -80,6 +86,42 @@ if (pendingAir) {
   check("reject berhasil", r.ok === true);
   check("status jadi rejected", (await Q.getSubmissionByCode(pendingAir.track_code)).status === "rejected");
 }
+
+console.log("== Infaq barang: jumlah + satuan ==");
+r = await A.submitHelpAction(null, fd({ item_id: 7, nickname: "Bu Uji", qty: 5, unit: "Pcs", message: "Kantong plastik 5 pcs", contact: "081200000001" }));
+check("ajukan barang berhasil", r.ok === true);
+const trackedUnit = await Q.getSubmissionByCode(r.code);
+check("satuan tersimpan", trackedUnit.unit === "Pcs");
+check("label memakai satuan", trackedUnit.qty_label.includes("Pcs"));
+
+console.log("== Bantuan tenaga ==");
+const tenagaItem = (await Q.getItemsWithStatus(1)).find((i) => i.kind === "tenaga");
+check("ada kebutuhan tenaga", Boolean(tenagaItem));
+r = await A.submitHelpAction(null, fd({ item_id: tenagaItem.id, nickname: "Mas Tenaga", contact: "081200000002" }));
+check("tenaga tanpa waktu ketersediaan ditolak", r.ok === false);
+r = await A.submitHelpAction(null, fd({ item_id: tenagaItem.id, nickname: "Mas Tenaga", availability: "Sabtu, 07.00-12.00 WIB", qty: 1, contact: "081200000002" }));
+check("tenaga dengan waktu berhasil", r.ok === true);
+const tenagaSub = await Q.getSubmissionByCode(r.code);
+check("pengajuan bertipe tenaga", tenagaSub.item_kind === "tenaga");
+check("waktu ketersediaan tersimpan", tenagaSub.availability.includes("Sabtu"));
+
+console.log("== Status: perlu konfirmasi -> disetujui -> selesai ==");
+r = await A.decideSubmissionAction(tenagaSub.id, "needs_confirmation", "Mohon konfirmasi jamnya.");
+check("tandai perlu konfirmasi", r.ok === true);
+check("status perlu konfirmasi", (await Q.getSubmissionByCode(tenagaSub.track_code)).status === "needs_confirmation");
+r = await A.decideSubmissionAction(tenagaSub.id, "approved", "Sudah jelas, silakan hadir.");
+check("setujui bantuan tenaga", r.ok === true);
+const fulTenaga = (await Q.getFulfillments(tenagaItem.id)).find((f) => f.person_name === "Mas Tenaga");
+check("kesediaan tenaga tercatat", Boolean(fulTenaga));
+check("disetujui belum berarti diterima", fulTenaga.received === 0);
+r = await A.toggleReceivedAction(fulTenaga.id, true);
+check("verifikasi penerimaan tenaga", r.ok === true);
+check("status selesai setelah verifikasi", (await Q.getSubmissionByCode(tenagaSub.track_code)).status === "done");
+const tenagaAfter = (await Q.getItemsWithStatus(1)).find((i) => i.id === tenagaItem.id);
+check("tanggal penerimaan tenaga tercatat", tenagaAfter.received_at !== null);
+check("jumlah diterima tenaga bertambah", tenagaAfter.received_qty >= 1);
+r = await A.decideSubmissionAction(tenagaSub.id, "status-ngawur", "");
+check("status keputusan tidak valid ditolak", r.ok === false);
 
 console.log("== Panitia: buat kegiatan baru + item ==");
 const longDesc = "Bersih-bersih. " + "B".repeat(3000);
@@ -104,6 +146,11 @@ check("sisa tercatat", newSurplus.item_name === "Beras");
 r = await A.updateSurplusAction(null, fd({ id: newSurplus.id, decision: "disimpan", decision_note: "Masih layak", pic_name: "Panitia", outcome: "Disimpan di gudang" }));
 check("update hasil sisa", r.ok === true);
 check("outcome tersimpan", (await Q.getSurplus(1)).find((s) => s.id === newSurplus.id).outcome === "Disimpan di gudang");
+r = await A.addSurplusAction(null, fd({ event_id: 1, item_name: "Kopi", qty: 1, qty_label: "1 Dus", condition: "sisa", decision: "disalurkan", pic_name: "Panitia", outcome: "Disalurkan ke warga sekitar" }));
+check("sisa barang bisa disalurkan", r.ok === true);
+check("keputusan disalurkan tersimpan", (await Q.getSurplus(1)).some((s) => s.decision === "disalurkan"));
+r = await A.addSurplusAction(null, fd({ event_id: 1, item_name: "Uji", decision: "ngawur" }));
+check("keputusan sisa tidak valid ditolak", r.ok === false);
 
 console.log("== Panitia: selesaikan kegiatan → arsip ==");
 r = await A.setEventStatusAction(1, "completed");
@@ -181,6 +228,7 @@ const E = await import("../src/lib/export.ts");
 for (const scope of ["all", "collected", "pending"]) {
   const data = await E.buildExportData(1, scope);
   check(`buildExportData ${scope} ada`, data != null && Array.isArray(data.rows));
+  check(`export ${scope} memuat satuan/pengajuan/disetujui/tgl terima`, data.rows.every((row) => "unit" in row && "submitted" in row && "approved" in row && "receivedAt" in row));
   const pdf = await E.generatePdf(data);
   check(`PDF ${scope} valid (%PDF)`, pdf.subarray(0, 4).toString() === "%PDF");
   const xlsx = await E.generateExcel(data);

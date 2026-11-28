@@ -50,6 +50,7 @@ export function mapItem(r: Raw): ItemRow {
   return {
     id: Number(r.id),
     event_id: Number(r.event_id),
+    kind: r.kind === "tenaga" ? "tenaga" : "barang",
     name: String(r.name),
     target_qty: r.target_qty == null ? null : Number(r.target_qty),
     target_label: String(r.target_label ?? ""),
@@ -69,6 +70,8 @@ export function mapSubmission(r: Raw): SubmissionRow {
     nickname: String(r.nickname),
     qty: r.qty == null ? null : Number(r.qty),
     qty_label: String(r.qty_label ?? ""),
+    unit: String(r.unit ?? ""),
+    availability: String(r.availability ?? ""),
     message: String(r.message ?? ""),
     contact: String(r.contact ?? ""),
     status: r.status as SubmissionRow["status"],
@@ -89,6 +92,7 @@ export function mapFulfillment(r: Raw): FulfillmentRow {
     qty_label: String(r.qty_label ?? ""),
     is_pic: b(r.is_pic),
     received: b(r.received),
+    received_at: normTs(r.received_at),
     note: String(r.note ?? ""),
     created_at: normTs(r.created_at) ?? "",
   };

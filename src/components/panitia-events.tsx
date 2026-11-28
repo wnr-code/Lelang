@@ -225,7 +225,16 @@ function ItemRow({ item }: { item: ItemWithStatus }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-bold text-ink">{item.name} <span className="font-semibold text-stone-400">· {item.target_label}</span></p>
-          {item.received_label && <p className="text-[11px] text-stone-400">Terkumpul: {item.received_label}{item.pic_name ? ` · PJ: ${item.pic_name}` : ""}</p>}
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-stone-400">
+            <span className={`chip ${item.kind === "tenaga" ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-800"}`}>
+              {item.kind === "tenaga" ? "Tenaga" : "Barang"}
+            </span>
+            {item.unit && <span>Satuan: {item.unit}</span>}
+            <span>Pengajuan: {item.submitted_count}</span>
+            <span>Disetujui: {item.approved_count}</span>
+            <span>Diterima: {item.received_label || "0"}</span>
+            {item.pic_name && <span>PJ: {item.pic_name}</span>}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <ItemStatusChip status={item.status} />
@@ -260,8 +269,12 @@ function ItemRow({ item }: { item: ItemWithStatus }) {
           className="mt-3 grid grid-cols-2 gap-2"
         >
           <input name="name" defaultValue={item.name} required maxLength={100} className="input col-span-2 py-2 text-xs" placeholder="Nama item" />
+          <select name="kind" defaultValue={item.kind} className="input col-span-2 py-2 text-xs">
+            <option value="barang">Barang / Sembako</option>
+            <option value="tenaga">Bantuan Tenaga</option>
+          </select>
           <input name="target_label" defaultValue={item.target_label} required maxLength={80} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg)" />
-          <input name="unit" defaultValue={item.unit} maxLength={30} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus)" />
+          <input name="unit" defaultValue={item.unit} maxLength={30} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus/Orang)" />
           <input name="note" defaultValue={item.note} maxLength={1000} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
           <button type="submit" disabled={pending} className="btn-primary col-span-2 py-2 text-xs">Simpan Item</button>
         </form>
@@ -277,7 +290,7 @@ function AddItemForm({ eventId }: { eventId: number }) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-secondary mt-3 w-full py-2 text-xs">
-        <Plus className="h-3.5 w-3.5" /> Tambah Item Kebutuhan
+        <Plus className="h-3.5 w-3.5" /> Tambah Kebutuhan (Barang / Tenaga)
       </button>
     );
   }
@@ -291,9 +304,13 @@ function AddItemForm({ eventId }: { eventId: number }) {
       }}
       className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100"
     >
-      <input name="name" required maxLength={100} className="input col-span-2 py-2 text-xs" placeholder="Nama item (mis. Beras)" />
-      <input name="target_label" required maxLength={80} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg / Secukupnya)" />
-      <input name="unit" maxLength={30} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus)" />
+      <select name="kind" defaultValue="barang" className="input col-span-2 py-2 text-xs">
+        <option value="barang">Barang / Sembako (beras, minyak, kopi…)</option>
+        <option value="tenaga">Bantuan Tenaga (masak, angkut, kebersihan…)</option>
+      </select>
+      <input name="name" required maxLength={100} className="input col-span-2 py-2 text-xs" placeholder="Nama kebutuhan (mis. Beras / Tenaga Masak)" />
+      <input name="target_label" required maxLength={80} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg / 6 Orang)" />
+      <input name="unit" maxLength={30} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus/Orang)" />
       <input name="note" maxLength={1000} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
       {error && <p className="col-span-2 text-[11px] font-semibold text-rose-600">{error}</p>}
       <button type="submit" disabled={pending} className="btn-primary py-2 text-xs">Tambah</button>

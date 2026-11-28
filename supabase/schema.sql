@@ -20,6 +20,7 @@ create table if not exists public.events (
 create table if not exists public.items (
   id bigint generated always as identity primary key,
   event_id bigint not null references public.events(id) on delete cascade,
+  kind text not null default 'barang' check (kind in ('barang','tenaga')),
   name text not null,
   target_qty double precision,
   target_label text not null,
@@ -37,9 +38,11 @@ create table if not exists public.submissions (
   nickname text not null,
   qty double precision,
   qty_label text not null default '',
+  unit text not null default '',
+  availability text not null default '',
   message text not null default '',
   contact text not null default '',
-  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  status text not null default 'pending' check (status in ('pending','approved','needs_confirmation','rejected','done')),
   track_code text not null unique,
   created_at timestamptz not null default now(),
   decided_at timestamptz,
@@ -55,6 +58,7 @@ create table if not exists public.fulfillments (
   qty_label text not null default '',
   is_pic boolean not null default false,
   received boolean not null default false,
+  received_at timestamptz,
   note text not null default '',
   created_at timestamptz not null default now()
 );
@@ -67,7 +71,7 @@ create table if not exists public.surplus (
   qty double precision,
   qty_label text not null default '',
   condition text not null default 'sisa' check (condition in ('sisa','berlebih')),
-  decision text not null default 'disimpan' check (decision in ('disimpan','kegiatan_berikutnya','ditukar','dijual','didonasikan','lainnya')),
+  decision text not null default 'disimpan' check (decision in ('disimpan','kegiatan_berikutnya','ditukar','dijual','disalurkan','didonasikan','lainnya')),
   decision_note text not null default '',
   pic_name text not null default '',
   outcome text not null default '',

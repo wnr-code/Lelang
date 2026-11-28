@@ -4,6 +4,15 @@
 import { getSupabase, throwIfError, TABLES, PHOTO_BUCKET } from "./supabase";
 import { newTrackCode, slugify } from "./auth";
 import { mapPhoto } from "./mappers";
+import type { SubmissionStatus } from "./types";
+
+const DECISION_MESSAGE: Record<SubmissionStatus, string> = {
+  pending: "Pengajuan dikembalikan ke daftar tunggu.",
+  approved: "Pengajuan disetujui. Catat penerimaan di menu Kelola Barang.",
+  needs_confirmation: "Pengajuan ditandai perlu konfirmasi. Hubungi anggota lewat WhatsApp.",
+  rejected: "Pengajuan ditolak.",
+  done: "Pengajuan selesai — bantuan tercatat sudah diterima.",
+};
 
 type Res = { ok: true; message?: string; code?: string; id?: number } | { ok: false; error: string };
 const ok = (message?: string, extra?: { code?: string; id?: number }): Res => ({ ok: true, message, ...extra });
@@ -23,6 +32,8 @@ export async function sbSubmitHelp(p: {
   label: string;
   message: string;
   contact: string;
+  unit: string;
+  availability: string;
 }): Promise<Res> {
   const sb = getSupabase();
   let code = newTrackCode();
@@ -40,6 +51,8 @@ export async function sbSubmitHelp(p: {
       nickname: p.nickname,
       qty: p.qty,
       qty_label: p.label,
+      unit: p.unit,
+      availability: p.availability,
       message: p.message,
       contact: p.contact,
       status: "pending",
@@ -128,6 +141,7 @@ export async function sbAddItem(p: {
   targetLabel: string;
   unit: string;
   note: string;
+  kind: "barang" | "tenaga";
 }): Promise<Res> {
   const sb = getSupabase();
   const { data: maxRow, error: maxErr } = await sb
@@ -147,9 +161,10 @@ export async function sbAddItem(p: {
     unit: p.unit,
     note: p.note,
     sort_order: nextSort,
+    kind: p.kind,
   });
   throwIfError(error, "addItem");
-  return ok("Item kebutuhan ditambahkan.");
+  return ok(p.kind === "tenaga" ? "Kebutuhan tenaga ditambahkan." : "Item kebutuhan ditambahkan.");
 }
 
 export async function sbUpdateItem(p: {
@@ -159,10 +174,11 @@ export async function sbUpdateItem(p: {
   targetLabel: string;
   unit: string;
   note: string;
+  kind: "barang" | "tenaga";
 }): Promise<Res> {
   const { error } = await getSupabase()
     .from(TABLES.items)
-    .update({ name: p.name, target_qty: p.targetQty, target_label: p.targetLabel, unit: p.unit, note: p.note })
+    .update({ name: p.name, target_qty: p.targetQty, target_label: p.targetLabel, unit: p.unit, note: p.note, kind: p.kind })
     .eq("id", p.id);
   throwIfError(error, "updateItem");
   return ok("Item diperbarui.");
@@ -182,7 +198,7 @@ export async function sbDeleteItem(id: number): Promise<Res> {
 
 // ---------- Keputusan pengajuan ----------
 
-export async function sbDecideSubmission(id: number, decision: "approved" | "rejected", note: string): Promise<Res> {
+export async function sbDecideSubmission(id: number, decision: SubmissionStatus, note: string): Promise<Res> {
   const sb = getSupabase();
   const { data: sub, error: subErr } = await sb
     .from(TABLES.submissions)
@@ -197,13 +213,15 @@ export async function sbDecideSubmission(id: number, decision: "approved" | "rej
     .eq("id", id);
   throwIfError(upErr, "decideSubmission");
 
+  const { data: existing, error: exErr } = await sb
+    .from(TABLES.fulfillments)
+    .select("id, received_at")
+    .eq("submission_id", id)
+    .maybeSingle();
+  throwIfError(exErr, "decideSubmission(cek fulfillment)");
+
   if (decision === "approved") {
-    const { data: existing, error: exErr } = await sb
-      .from(TABLES.fulfillments)
-      .select("id")
-      .eq("submission_id", id)
-      .maybeSingle();
-    throwIfError(exErr, "decideSubmission(cek fulfillment)");
+    // Disetujui = kesediaan dicatat, BELUM diterima. Verifikasi di menu Kelola Barang.
     if (!existing) {
       const { error: insErr } = await sb.from(TABLES.fulfillments).insert({
         item_id: sub.item_id,
@@ -214,15 +232,34 @@ export async function sbDecideSubmission(id: number, decision: "approved" | "rej
       });
       throwIfError(insErr, "decideSubmission(insert fulfillment)");
     }
-  } else {
+  } else if (decision === "rejected") {
     const { error: delErr } = await sb
       .from(TABLES.fulfillments)
       .delete()
       .eq("submission_id", id)
       .eq("received", false);
     throwIfError(delErr, "decideSubmission(hapus fulfillment)");
+  } else if (decision === "done") {
+    if (!existing) {
+      const { error: insErr } = await sb.from(TABLES.fulfillments).insert({
+        item_id: sub.item_id,
+        submission_id: id,
+        person_name: sub.nickname,
+        qty: sub.qty,
+        qty_label: sub.qty_label,
+        received: true,
+        received_at: nowISO(),
+      });
+      throwIfError(insErr, "decideSubmission(insert diterima)");
+    } else {
+      const { error: upErr } = await sb
+        .from(TABLES.fulfillments)
+        .update({ received: true, received_at: existing.received_at ?? nowISO() })
+        .eq("id", existing.id);
+      throwIfError(upErr, "decideSubmission(tandai diterima)");
+    }
   }
-  return ok(decision === "approved" ? "Pengajuan disetujui." : "Pengajuan ditolak.");
+  return ok(DECISION_MESSAGE[decision]);
 }
 
 // ---------- Barang & penanggung jawab ----------
@@ -246,8 +283,26 @@ export async function sbAddFulfillment(p: {
 }
 
 export async function sbToggleReceived(id: number, received: boolean): Promise<Res> {
-  const { error } = await getSupabase().from(TABLES.fulfillments).update({ received }).eq("id", id);
+  const sb = getSupabase();
+  const { data: f, error: readErr } = await sb
+    .from(TABLES.fulfillments)
+    .select("submission_id")
+    .eq("id", id)
+    .maybeSingle();
+  throwIfError(readErr, "toggleReceived(baca)");
+  const { error } = await sb
+    .from(TABLES.fulfillments)
+    .update({ received, received_at: received ? nowISO() : null })
+    .eq("id", id);
   throwIfError(error, "toggleReceived");
+  if (f?.submission_id) {
+    const { error: subErr } = await sb
+      .from(TABLES.submissions)
+      .update({ status: received ? "done" : "approved" })
+      .eq("id", f.submission_id)
+      .in("status", ["approved", "done"]);
+    throwIfError(subErr, "toggleReceived(status pengajuan)");
+  }
   return ok(received ? "Barang ditandai diterima." : "Tanda diterima dibatalkan.");
 }
 

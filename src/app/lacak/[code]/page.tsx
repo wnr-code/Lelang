@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Search, Clock3, CheckCircle2, XCircle, UserCheck, CalendarDays } from "lucide-react";
+import { ArrowLeft, Search, Clock3, CheckCircle2, XCircle, UserCheck, CalendarDays, HelpCircle } from "lucide-react";
 import { PublicHeader, PublicFooter, SubmissionStatusChip, formatDate } from "@/components/ui";
 import { getSubmissionByCode } from "@/lib/queries";
 
@@ -28,8 +28,10 @@ export default async function TrackPage({ params }: { params: Promise<{ code: st
 
           <div className="mt-4 space-y-3 border-t border-stone-100 pt-4">
             <Row label="Kegiatan" value={sub.event_title} />
-            <Row label="Item" value={sub.item_name} />
+            <Row label={sub.item_kind === "tenaga" ? "Jenis bantuan" : "Barang"} value={sub.item_name} />
             <Row label="Kesediaanmu" value={sub.qty_label || "Secukupnya"} />
+            {(sub.unit || sub.item_unit) && <Row label="Satuan" value={sub.unit || sub.item_unit} />}
+            {sub.availability && <Row label="Waktu tersedia" value={sub.availability} />}
             <Row label="Nama panggilan" value={sub.nickname} />
             <Row label="Diajukan" value={formatDateTime(sub.created_at)} />
             {sub.decided_at && <Row label="Diputuskan" value={formatDateTime(sub.decided_at)} />}
@@ -39,7 +41,7 @@ export default async function TrackPage({ params }: { params: Promise<{ code: st
             <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-amber-50 px-4 py-3 ring-1 ring-amber-200">
               <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <p className="text-xs leading-relaxed text-amber-800">
-                Pengajuanmu sedang menunggu keputusan panitia. Keputusan penerima dan penanggung jawab
+                Pengajuanmu sedang menunggu konfirmasi panitia. Keputusan penerima dan penanggung jawab
                 sepenuhnya ada di panitia — cek halaman ini secara berkala.
               </p>
             </div>
@@ -59,6 +61,31 @@ export default async function TrackPage({ params }: { params: Promise<{ code: st
               <p className="mt-2 text-xs text-emerald-700">
                 Silakan koordinasikan penyerahan barang dengan panitia sesuai arahan di atas. Terima kasih atas kebaikanmu!
               </p>
+            </div>
+          )}
+
+          {sub.status === "needs_confirmation" && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-sky-50 px-4 py-3 ring-1 ring-sky-200">
+              <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
+              <div>
+                <p className="text-sm font-extrabold text-sky-900">Perlu konfirmasi</p>
+                <p className="mt-1 text-xs leading-relaxed text-sky-800">
+                  Panitia perlu memastikan detail bantuanmu. Silakan tunggu dihubungi lewat WhatsApp.
+                </p>
+                {sub.decision_note && <p className="mt-1.5 text-xs italic text-sky-700">“{sub.decision_note}”</p>}
+              </div>
+            </div>
+          )}
+
+          {sub.status === "done" && (
+            <div className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200">
+              <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-900">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Selesai — bantuanmu sudah diterima
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-emerald-800">
+                Panitia sudah memverifikasi penerimaan bantuanmu. Jazakumullahu khairan atas kebaikan yang dititipkan.
+              </p>
+              {sub.decision_note && <p className="mt-1.5 text-xs italic text-emerald-700">“{sub.decision_note}”</p>}
             </div>
           )}
 

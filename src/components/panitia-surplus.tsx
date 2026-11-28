@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Recycle, Camera, Upload, X, Check } from "lucide-react";
 import { addSurplusAction, updateSurplusAction, deleteSurplusAction, uploadPhotoAction, deletePhotoAction } from "@/lib/actions";
 import type { SurplusRow, PhotoRow, ItemWithStatus } from "@/lib/types";
-import { SURPLUS_DECISION_LABEL, SURPLUS_CONDITION_LABEL } from "@/lib/types";
+import { SURPLUS_DECISION_LABEL, SURPLUS_DECISION_OPTIONS, SURPLUS_CONDITION_LABEL } from "@/lib/types";
 import Image from "next/image";
 import { compressImageForUpload, MAX_UPLOAD_BYTES } from "@/lib/client-image";
 
@@ -25,7 +25,11 @@ function useAction() {
   return { pending, error, message, run };
 }
 
-const DECISIONS = Object.entries(SURPLUS_DECISION_LABEL) as Array<[SurplusRow["decision"], string]>;
+// Lima pilihan pengelolaan sisa: Disimpan, Digunakan untuk kegiatan berikutnya,
+// Ditukar, Dijual kembali, Disalurkan.
+const DECISIONS = SURPLUS_DECISION_OPTIONS.map(
+  (d) => [d, SURPLUS_DECISION_LABEL[d]] as [SurplusRow["decision"], string]
+);
 
 export function SurplusSection({ eventId, items, surplus }: { eventId: number; items: ItemWithStatus[]; surplus: SurplusRow[] }) {
   const [adding, setAdding] = useState(false);

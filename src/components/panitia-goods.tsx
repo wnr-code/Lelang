@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserCheck, PackageCheck, Package, Trash2, X } from "lucide-react";
+import { Plus, UserCheck, PackageCheck, Trash2, CalendarCheck } from "lucide-react";
 import { addFulfillmentAction, toggleReceivedAction, setPicAction, deleteFulfillmentAction } from "@/lib/actions";
 import type { ItemWithStatus, FulfillmentRow } from "@/lib/types";
 import { ItemStatusChip, ProgressBar } from "@/components/ui";
+import { ITEM_STATUS_LABEL } from "@/lib/types";
+import { fmtQty } from "@/lib/item-status";
 
 export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fulfillments: FulfillmentRow[] }) {
   const [adding, setAdding] = useState(false);
@@ -16,13 +18,24 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-extrabold text-ink">{item.name}</h3>
-          <p className="text-xs text-stone-400">
-            Target {item.target_label}
-            {item.received_label && <> · terkumpul <b className="text-emerald-700">{item.received_label}</b></>}
-          </p>
+          <span className={`chip mt-1 ${item.kind === "tenaga" ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-800"}`}>
+            {item.kind === "tenaga" ? "Bantuan Tenaga" : "Barang / Sembako"}
+          </span>
         </div>
         <ItemStatusChip status={item.status} />
       </div>
+
+      {/* Catatan lengkap tiap barang: target, pengajuan, disetujui, diterima, satuan, PJ, tanggal, status */}
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-stone-50 px-3.5 py-3 text-[11px] sm:grid-cols-4">
+        <Field label="Jumlah target" value={item.target_label} />
+        <Field label="Satuan" value={item.unit || "—"} />
+        <Field label="Jumlah pengajuan" value={`${item.submitted_count} pengajuan`} />
+        <Field label="Jumlah disetujui" value={`${item.approved_count}${item.approved_qty > 0 ? ` (${fmtQty(item.approved_qty)}${item.unit ? " " + item.unit : ""})` : ""}`} />
+        <Field label="Jumlah diterima" value={item.received_label || "0"} strong />
+        <Field label="Penanggung jawab" value={item.pic_name || "Belum ditetapkan"} />
+        <Field label="Tanggal penerimaan" value={item.received_at ? shortDateTime(item.received_at) : "Belum diterima"} />
+        <Field label="Status" value={ITEM_STATUS_LABEL[item.status]} />
+      </dl>
 
       {item.target_qty != null && (
         <ProgressBar value={item.received_qty} max={item.target_qty} className="mt-3" />
@@ -48,6 +61,11 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
                 {f.qty_label || "Jumlah tidak dicatat"}
                 {f.note ? ` · ${f.note}` : ""}
               </p>
+              {f.received === 1 && (
+                <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                  <CalendarCheck className="h-3 w-3" /> Diterima: {shortDateTime(f.received_at ?? f.created_at)}
+                </p>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
@@ -123,4 +141,20 @@ function useAction() {
     });
   }
   return { pending, error, run };
+}
+
+function Field({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-stone-400">{label}</dt>
+      <dd className={`truncate ${strong ? "font-extrabold text-emerald-700" : "font-semibold text-ink"}`}>{value}</dd>
+    </div>
+  );
+}
+
+function shortDateTime(s: string): string {
+  const d = new Date(s.includes("T") ? s : s.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) +
+    " " + d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
