@@ -111,7 +111,7 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
 
       <div className="space-y-3">
         <div>
-          <label className="label" htmlFor={`nickname-${item.id}`}>Nama panggilan</label>
+          <label className="label" htmlFor={`nickname-${item.id}`}>Nama panggilan (Ikhwan/Akhwat)</label>
           <input
             id={`nickname-${item.id}`}
             name="nickname"
@@ -119,7 +119,7 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
             maxLength={80}
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="mis. Kang Asep"
+            placeholder="Nama Ikhwan/Akhwat"
             className="input"
           />
         </div>
