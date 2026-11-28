@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  Settings, Database, HardDrive, ShieldCheck, Moon, Download, Info, LogOut, ExternalLink, CheckCircle2,
+  Settings, Database, HardDrive, ShieldCheck, Moon, Download, Info, LogOut, ExternalLink, CheckCircle2, MessageCircle,
 } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { isWorkerd } from "@/lib/storage";
-import { getDashboardCounts } from "@/lib/queries";
+import { getDashboardCounts, getPanitiaWa } from "@/lib/queries";
+import { PanitiaWaForm } from "@/components/panitia-wa-form";
 import { ROUTINE, nextMalamJumatKe4, formatRoutineDate } from "@/lib/routine";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function PanitiaPengaturanPage() {
   const worker = isWorkerd();
   const supabase = isSupabaseConfigured();
   const counts = await getDashboardCounts();
+  const panitiaWa = await getPanitiaWa();
   const nextRoutine = nextMalamJumatKe4();
 
   return (
@@ -46,15 +48,26 @@ export default async function PanitiaPengaturanPage() {
         </a>
       </section>
 
+      {/* Kontak WhatsApp panitia */}
+      <section className="card px-5 py-5">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-ink">
+          <MessageCircle className="h-4 w-4 text-emerald-700" /> Kontak WhatsApp Panitia
+        </h2>
+        <PanitiaWaForm initial={panitiaWa} />
+      </section>
+
       {/* Aturan aplikasi */}
       <section className="card px-5 py-5">
         <h2 className="mb-2 flex items-center gap-2 text-sm font-extrabold text-ink">
           <Info className="h-4 w-4 text-emerald-700" /> Aturan yang Berlaku
         </h2>
         <ul className="space-y-1.5 text-[13px] leading-relaxed text-stone-600">
-          <li>• Nomor WhatsApp pengaju <b>wajib</b> dan <b>hanya terlihat panitia</b>.</li>
-          <li>• Pengajuan anggota <b>belum</b> dianggap diterima sampai panitia memverifikasi di menu Kelola Barang.</li>
-          <li>• Status pengajuan: Menunggu konfirmasi → Disetujui / Perlu konfirmasi / Ditolak → Selesai.</li>
+          <li>• <b>Tidak ada akun/login anggota.</b> Hanya admin yang login; anggota mengakses lewat tautan publik tanpa registrasi.</li>
+          <li>• Nomor WhatsApp pengaju infaq <b>wajib</b> dan <b>hanya terlihat panitia</b>.</li>
+          <li>• Pengajuan infaq pada item yang sudah ada otomatis tercatat sebagai kesediaan — <b>belum</b> dianggap diterima sampai panitia memverifikasi di Kelola Barang.</li>
+          <li>• Usulan item baru dari anggota masuk dengan status <b>Menunggu persetujuan</b>; hanya setelah disetujui admin item menjadi kebutuhan resmi.</li>
+          <li>• Status pengajuan: Menunggu konfirmasi → Disetujui / Perlu konfirmasi / Ditolak → Selesai. Setiap perubahan tercatat di riwayat status.</li>
+          <li>• Form publik dilindungi anti-spam (honeypot, jebakan waktu, batas 8 pengajuan/jam) tanpa memaksa akun.</li>
           <li>• Sisa barang: Disimpan, Digunakan untuk kegiatan berikutnya, Ditukar, Dijual kembali, Disalurkan.</li>
           <li>• Foto dokumentasi maksimal <b>2 MB</b>, dikompres otomatis ke WebP.</li>
           <li>• Tidak ada nominal uang yang ditampilkan ke publik.</li>

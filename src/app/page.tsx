@@ -9,6 +9,7 @@ import { PublicHeader } from "@/components/public-header";
 import { getActiveEvents } from "@/lib/queries";
 import { ROUTINE, nextMalamJumatKe4, formatRoutineDate } from "@/lib/routine";
 import { EventCountdown } from "@/components/event-countdown";
+import { EventCarousel } from "@/components/event-carousel";
 import { eventStartsAt, formatEventTime } from "@/lib/event-time";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,13 @@ export default async function HomePage() {
   const events = await getActiveEvents();
   const nextRoutine = nextMalamJumatKe4();
   const first = events[0];
+  // Acara terdekat (akan datang) untuk dipin otomatis di banner hero.
+  const upcoming = events
+    .map((ev) => ({ ev, starts: eventStartsAt(ev) }))
+    .filter((x) => x.starts && x.starts.getTime() > Date.now())
+    .sort((a, b) => a.starts!.getTime() - b.starts!.getTime());
+  const nearest = upcoming[0]?.ev ?? first;
+  const nearestStarts = nearest ? eventStartsAt(nearest) : null;
 
   const menu = [
     { href: "/#kegiatan", title: "Lelang Kebaikan", desc: "Berinfaq & Berdonasi", img: "/images/gavel.webp", tile: "bg-amber-100", ic: "text-amber-600" },
@@ -52,7 +60,7 @@ export default async function HomePage() {
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 via-emerald-50/85 to-transparent sm:via-emerald-50/55" />
-          <div className="relative min-h-[286px] px-4 pt-7 pb-16">
+          <div className="relative min-h-[300px] px-4 pt-7 pb-4">
             <div className="max-w-[64%] sm:max-w-[52%]">
               <h1 className="text-[32px] font-extrabold italic leading-[1.08] tracking-tight text-emerald-900 sm:text-[40px]">
                 Dari Kita<br />Untuk Kita
@@ -67,64 +75,44 @@ export default async function HomePage() {
                 Korwil Cigatas <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
+
+            {/* Pin otomatis: acara terdekat */}
+            {nearest && (
+              <Link
+                href={`/kegiatan/${nearest.slug}`}
+                className="absolute inset-x-4 bottom-3 flex items-center gap-3 rounded-2xl bg-white/95 px-3.5 py-2.5 shadow-[0_8px_24px_rgba(7,91,53,0.18)] ring-1 ring-emerald-900/10 backdrop-blur transition active:scale-[0.99]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-emerald-800">
+                  <CalendarPlus className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Acara Terdekat</span>
+                  <span className="block truncate text-[14px] font-extrabold leading-tight text-ink">{nearest.title}</span>
+                  {nearestStarts && <EventCountdown startsAt={nearestStarts.toISOString()} compact />}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-emerald-700" />
+              </Link>
+            )}
           </div>
         </section>
 
-        {/* ---------- Kegiatan Mendatang ---------- */}
-        <section id="kegiatan" className="relative z-10 -mt-9 scroll-mt-24 px-4">
-          <div className="card animate-fade-up px-4 py-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[15px] font-extrabold text-ink">Kegiatan Mendatang</h2>
-              <Link href="/informasi" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
-                Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            {events.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 rounded-2xl bg-emerald-50/60 px-4 py-7 text-center ring-1 ring-emerald-100">
-                <PackageOpen className="h-8 w-8 text-emerald-300" />
-                <p className="text-sm font-bold text-stone-600">Belum ada kegiatan aktif</p>
-                <p className="text-xs text-stone-400">Nantikan informasi kegiatan berikutnya dari panitia.</p>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {events.map((ev) => {
-                  const db = dateBlock(ev.event_date);
-                  return (
-                    <div key={ev.id} className="flex items-center gap-3 rounded-2xl px-2.5 py-2.5 ring-1 ring-stone-100">
-                      <div className="flex w-[68px] shrink-0 flex-col items-center rounded-2xl bg-emerald-100/70 py-2">
-                        <span className="text-[22px] font-extrabold leading-none text-emerald-900">{db.day}</span>
-                        <span className="mt-0.5 text-[13px] font-extrabold leading-none text-emerald-900">{db.mon}</span>
-                        <span className="text-[12px] font-semibold text-ink/60">{db.year}</span>
-                        {db.dow && (
-                          <span className="mt-1.5 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-bold text-white">{db.dow}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-extrabold text-ink">{ev.title}</p>
-                        <p className="mt-0.5 flex items-center gap-1 text-[12px] font-semibold text-stone-500">
-                          <MapPin className="h-3 w-3 shrink-0 text-emerald-600" />
-                          <span className="truncate">{ev.location || "Cigatas"}{formatEventTime(ev.event_time) ? ` · ${formatEventTime(ev.event_time)}` : ""}</span>
-                        </p>
-                        {(() => {
-                          const starts = eventStartsAt(ev);
-                          return starts ? <div className="mt-1"><EventCountdown startsAt={starts.toISOString()} compact /></div> : null;
-                        })()}
-                        <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-stone-400">{ev.description}</p>
-                      </div>
-                      <Link
-                        href={`/kegiatan/${ev.slug}`}
-                        className="flex w-[68px] shrink-0 flex-col items-center gap-1 rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-800 px-2 py-3 text-white shadow-md shadow-emerald-800/20 transition active:scale-[0.97]"
-                      >
-                        <CalendarPlus className="h-5 w-5" />
-                        <span className="text-center text-[11px] font-extrabold leading-tight">Ikut<br />Berinfaq</span>
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        {/* ---------- Kegiatan Mendatang (berjalan otomatis) ---------- */}
+        <section id="kegiatan" className="mt-6 scroll-mt-24 px-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[15px] font-extrabold text-ink">Kegiatan Mendatang</h2>
+            <Link href="/informasi" className="inline-flex items-center gap-0.5 text-[12px] font-bold text-emerald-700">
+              Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
+          {events.length === 0 ? (
+            <div className="card flex flex-col items-center gap-2 px-4 py-7 text-center">
+              <PackageOpen className="h-8 w-8 text-emerald-300" />
+              <p className="text-sm font-bold text-stone-600">Belum ada kegiatan aktif</p>
+              <p className="text-xs text-stone-400">Nantikan informasi kegiatan berikutnya dari panitia.</p>
+            </div>
+          ) : (
+            <EventCarousel events={events} />
+          )}
         </section>
 
         {/* ---------- Informasi Kegiatan ---------- */}

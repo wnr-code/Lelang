@@ -7,7 +7,8 @@ import { EventTabs } from "@/components/event-tabs";
 import { EventCountdown } from "@/components/event-countdown";
 import { LelangTitle } from "@/components/lelang-title";
 import { PushReminder } from "@/components/push-reminder";
-import { getEventBySlug, getItemsWithStatus, getEventProgress } from "@/lib/queries";
+import { getEventBySlug, getItemsWithStatus, getEventProgress, getPanitiaWa } from "@/lib/queries";
+import { ProposalForm } from "@/components/proposal-form";
 import { eventStartsAt, formatEventTime } from "@/lib/event-time";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
   const items = await getItemsWithStatus(event.id);
   const progress = await getEventProgress(event.id);
+  const panitiaWa = await getPanitiaWa();
   const isActive = event.status === "active";
   const starts = eventStartsAt(event);
   const timeText = formatEventTime(event.event_time);
@@ -70,9 +72,23 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
         <section className="mt-7">
           <LelangTitle />
           <div className="mt-4">
-            <EventTabs items={items} isActive={isActive} slug={event.slug} />
+            <EventTabs items={items} isActive={isActive} slug={event.slug} panitiaWa={panitiaWa} />
           </div>
         </section>
+
+        {isActive && (
+          <section className="mt-6">
+            <div className="card px-5 py-4">
+              <h2 className="text-[15px] font-extrabold text-ink">Tidak menemukan yang kamu cari?</h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-stone-500">
+                Usulkan barang/kebutuhan baru. Panitia akan meninjau dan menyetujui sebelum menjadi kebutuhan resmi kegiatan.
+              </p>
+              <div className="mt-3">
+                <ProposalForm eventId={event.id} panitiaWa={panitiaWa} />
+              </div>
+            </div>
+          </section>
+        )}
 
         {!isActive && (
           <div className="card mt-6 px-5 py-4 text-center">

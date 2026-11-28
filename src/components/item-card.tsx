@@ -4,7 +4,7 @@ import { HelpForm } from "./help-form";
 import type { ItemWithStatus } from "@/lib/types";
 
 /** Kartu kebutuhan (barang / sembako / tenaga) dengan progres & form bantuan. */
-export function ItemCard({ item, isActive, slug }: { item: ItemWithStatus; isActive: boolean; slug: string }) {
+export function ItemCard({ item, isActive, slug, panitiaWa = "" }: { item: ItemWithStatus; isActive: boolean; slug: string; panitiaWa?: string }) {
   return (
     <div className="card px-5 py-4">
       <div className="flex items-start justify-between gap-3">
@@ -36,7 +36,7 @@ export function ItemCard({ item, isActive, slug }: { item: ItemWithStatus; isAct
 
       {isActive && item.status !== "fulfilled" && (
         <div className="mt-4">
-          <HelpForm item={item} eventSlug={slug} />
+          <HelpForm item={item} eventSlug={slug} panitiaWa={panitiaWa} />
         </div>
       )}
       {item.status === "fulfilled" && (

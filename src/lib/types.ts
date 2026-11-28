@@ -1,5 +1,8 @@
 export type EventStatus = "draft" | "active" | "completed" | "archived";
 export type SubmissionStatus = "pending" | "approved" | "needs_confirmation" | "rejected" | "done";
+/** Status usulan item baru dari anggota (terpisah dari pengajuan infaq). */
+export type ProposalStatus = "pending" | "approved" | "rejected";
+export type StatusEntity = "submission" | "proposal";
 export type ItemKind = "barang" | "tenaga";
 export type ItemCategory = "sembako" | "barang" | "tenaga" | "lainnya";
 export type ItemStatus = "open" | "process" | "fulfilled";
@@ -60,6 +63,37 @@ export interface SubmissionRow {
   decision_note: string;
 }
 
+/** Usulan item baru dari anggota — menunggu persetujuan admin sebelum jadi kebutuhan resmi. */
+export interface ItemProposalRow {
+  id: number;
+  event_id: number;
+  name: string;
+  qty: number | null;
+  qty_label: string;
+  unit: string;
+  category: ItemCategory;
+  nickname: string;
+  contact: string;
+  note: string;
+  status: ProposalStatus;
+  track_code: string;
+  created_at: string;
+  decided_at: string | null;
+  decision_note: string;
+  approved_item_id: number | null;
+}
+
+/** Riwayat status (pengajuan infaq & usulan item) — jejak audit lengkap. */
+export interface StatusLogRow {
+  id: number;
+  entity_type: StatusEntity;
+  entity_id: number;
+  status: string;
+  note: string;
+  actor: "anggota" | "panitia" | "sistem";
+  created_at: string;
+}
+
 export interface FulfillmentRow {
   id: number;
   item_id: number;
@@ -114,6 +148,12 @@ export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
   open: "Dibuka",
   process: "Dalam proses",
   fulfilled: "Terpenuhi",
+};
+
+export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
+  pending: "Menunggu persetujuan",
+  approved: "Disetujui",
+  rejected: "Ditolak",
 };
 
 export const SUBMISSION_STATUS_LABEL: Record<SubmissionStatus, string> = {

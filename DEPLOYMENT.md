@@ -251,3 +251,39 @@ manual lewat tombol **Kirim Pengingat Sekarang** di `/panitia/notifikasi`.
 **Ukuran teks.** Dasar font dinaikkan 16→17px dan literal teks kecil +1px agar lebih
 terbaca di HP Android. Judul "Lelang Kebaikan" memakai grafis ketuk palu
 (`public/images/gavel.webp`).
+
+## 11. Fase 4 — Model akses, usulan item, riwayat status & UI/UX
+
+**Model akses (wajib).** Tidak ada akun/login/registrasi anggota. Hanya **admin** yang
+login (`/panitia/login`). Anggota mengakses lewat tautan publik tanpa password.
+
+**Dua jenis pengajuan (tabel & status terpisah):**
+- **A. Pengajuan infaq** pada item yang sudah dibuat admin → tabel `submissions`
+  (status: pending → approved/needs_confirmation/rejected → done). Otomatis tercatat
+  sebagai kesediaan; **tidak** otomatis dianggap barang diterima. Ada kode lacak `CGT-xxxxxx`
+  dan tombol **Konfirmasi via WhatsApp**. Penerimaan fisik diverifikasi admin di
+  `fulfillments.received` / `received_at` (menu Kelola Barang).
+- **B. Usulan item baru** dari anggota → tabel `item_proposals`
+  (status: pending = *Menunggu persetujuan* → approved/rejected). Kode `CGU-xxxxxx`.
+  Admin menyetujui/menolak/mengubah di `/panitia/usulan`. Hanya setelah **approved**
+  item dibuat resmi (`items`) dan terbuka untuk kontribusi anggota lain.
+
+**Pemisahan data:** `item_proposals` (usulan) ≠ `submissions` (pengajuan infaq) ≠
+`fulfillments` (komitmen kontribusi) ≠ `fulfillments.received` (penerimaan barang).
+
+**Riwayat status.** Tabel `status_logs` mencatat setiap perubahan status pengajuan &
+usulan (waktu, pelaku anggota/panitia/sistem, catatan). Ditampilkan di halaman lacak.
+
+**Proteksi spam publik (tanpa akun).** `src/lib/spam.ts`: honeypot (`company`),
+jebakan waktu (`_ts`, tolak <1,2 detik atau >3 jam), dan rate limit `rate_limits`
+(maks. 8 pengajuan/jam per nomor WA/IP). Validasi tetap di server.
+
+**WhatsApp panitia.** Disetel di `/panitia/pengaturan` (tabel `app_settings`, kunci
+`panitia_wa`), dinormalisasi ke `62xxx`. Dipakai tombol konfirmasi pengajuan/usulan.
+
+**UI/UX.**
+- Beranda: daftar kegiatan **berjalan otomatis dari pinggir** (carousel marquee,
+  `EventCarousel`), bukan list ke bawah. **Acara terdekat dipin otomatis** di banner hero.
+- Footer: grafis **daun beranting beranimasi tumbuh** (`FooterLeaves`, SVG + CSS:
+  batang digambar, daun mekar & bergoyang), warna palet Cigatas.
+- `overflow-x: hidden` global agar tidak ada konten melebar ke pinggir.

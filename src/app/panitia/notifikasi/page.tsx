@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Inbox, Recycle, Moon, ArrowRight, Bell } from "lucide-react";
+import { Inbox, Recycle, Moon, ArrowRight, Bell, Lightbulb } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
 import { getSubmissions, getDashboardCounts } from "@/lib/queries";
 import { ROUTINE, nextMalamJumatKe4, formatRoutineDate } from "@/lib/routine";
@@ -40,6 +40,15 @@ export default async function NotifikasiPage() {
           <div className="flex-1">
             <p className="text-sm font-extrabold text-ink">{pending.length} pengajuan perlu ditinjau</p>
             <p className="text-xs text-stone-400">Menunggu konfirmasi & perlu konfirmasi.</p>
+          </div>
+          <ArrowRight className="h-4 w-4 text-stone-300" />
+        </Link>
+
+        <Link href="/panitia/usulan" className="card flex items-center gap-4 px-5 py-4 transition hover:shadow-md">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600"><Lightbulb className="h-5 w-5" /></span>
+          <div className="flex-1">
+            <p className="text-sm font-extrabold text-ink">{counts.proposalsPending} usulan item menunggu persetujuan</p>
+            <p className="text-xs text-stone-400">Tinjau & setujui usulan barang baru dari anggota.</p>
           </div>
           <ArrowRight className="h-4 w-4 text-stone-300" />
         </Link>

@@ -35,7 +35,7 @@ export function getDb(): DatabaseSync {
   return db;
 }
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function submissionsDDL(name: string): string {
   return `CREATE TABLE IF NOT EXISTS ${name} (
@@ -214,12 +214,49 @@ function migrate(db: DatabaseSync) {
     value TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS item_proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    qty REAL,
+    qty_label TEXT NOT NULL DEFAULT '',
+    unit TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT 'barang' CHECK (category IN ('sembako','barang','tenaga','lainnya')),
+    nickname TEXT NOT NULL,
+    contact TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+    track_code TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    decided_at TEXT,
+    decision_note TEXT NOT NULL DEFAULT '',
+    approved_item_id INTEGER REFERENCES items(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS status_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL CHECK (entity_type IN ('submission','proposal')),
+    entity_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    actor TEXT NOT NULL DEFAULT 'sistem' CHECK (actor IN ('anggota','panitia','sistem')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS rate_limits (
+    key TEXT PRIMARY KEY,
+    window_start TEXT NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE INDEX IF NOT EXISTS idx_items_event ON items(event_id);
   CREATE INDEX IF NOT EXISTS idx_submissions_event ON submissions(event_id);
   CREATE INDEX IF NOT EXISTS idx_submissions_item ON submissions(item_id);
   CREATE INDEX IF NOT EXISTS idx_fulfillments_item ON fulfillments(item_id);
   CREATE INDEX IF NOT EXISTS idx_surplus_event ON surplus(event_id);
   CREATE INDEX IF NOT EXISTS idx_photos_event ON photos(event_id);
+  CREATE INDEX IF NOT EXISTS idx_proposals_event ON item_proposals(event_id);
+  CREATE INDEX IF NOT EXISTS idx_status_logs_entity ON status_logs(entity_type, entity_id);
   `);
 
   upgrade(db);

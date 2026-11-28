@@ -64,6 +64,11 @@ export async function requirePanitia(): Promise<void> {
   }
 }
 
+/** Kode usulan item baru (prefix CGU-). */
+export function newProposalCode(): string {
+  return "CGU-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
 export function newTrackCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";

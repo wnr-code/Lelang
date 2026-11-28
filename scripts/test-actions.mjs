@@ -15,6 +15,9 @@ function check(name, cond) {
 }
 function fd(obj) {
   const f = new FormData();
+  // Field anti-spam default: honeypot kosong + jebakan waktu sudah "diisi" 5 detik lalu.
+  f.set("company", "");
+  f.set("_ts", String(Date.now() - 5000));
   for (const [k, v] of Object.entries(obj)) f.set(k, String(v));
   return f;
 }
@@ -345,6 +348,106 @@ console.log("== Fase 3: enkripsi Web Push (RFC 8291) ==");
   check("payload terenkripsi bisa didekripsi klien", text === payload && plain[plain.length - 1] === 2);
   const keys = await W.generateVapidKeys();
   check("VAPID public key 65 byte", W.b64urlToBytes(keys.publicKey).length === 65);
+}
+
+
+console.log("== Fase 4: usulan item baru (proposal) ==");
+const SL = await import("../src/lib/status-log.ts");
+// Pastikan event 1 aktif kembali (uji sebelumnya mungkin mengarsipkan).
+await A.setEventStatusAction(1, "active");
+r = await A.submitProposalAction(null, fd({ event_id: 1, name: "", nickname: "Pengusul" }));
+check("usulan tanpa nama ditolak", r.ok === false);
+r = await A.submitProposalAction(null, fd({ event_id: 1, name: "Terpal", nickname: "" }));
+check("usulan tanpa nama panggilan ditolak", r.ok === false);
+r = await A.submitProposalAction(null, fd({ event_id: 1, name: "Terpal Bambu", qty: 4, unit: "Lembar", category: "barang", nickname: "Ikhwan Pengusul", contact: "081234500001", note: "Untuk alas duduk" }));
+check("usulan valid berhasil", r.ok === true);
+check("kode usulan prefix CGU-", /^CGU-/.test(r.code || ""));
+const propCode = r.code;
+{
+  const prop = await Q.getProposalByCode(propCode);
+  check("usulan tercatat pending", prop.status === "pending");
+  check("usulan punya kegiatan & tanggal", Boolean(prop.event_title) && Boolean(prop.created_at));
+  const logs = await SL.getStatusLogs("proposal", prop.id);
+  check("usulan punya riwayat status", logs.length === 1 && logs[0].status === "pending");
+}
+// honeypot terisi → ditolak
+r = await A.submitProposalAction(null, fd({ event_id: 1, name: "Bot Item", nickname: "Bot", company: "http://spam.example" }));
+check("honeypot terisi ditolak", r.ok === false && /otomatis/.test(r.error));
+// jebakan waktu: terlalu instan
+{
+  const f = new FormData();
+  f.set("company", ""); f.set("_ts", String(Date.now()));
+  f.set("event_id", "1"); f.set("name", "Instan"); f.set("nickname", "Cepat");
+  r = await A.submitProposalAction(null, f);
+  check("submit terlalu cepat ditolak", r.ok === false && /cepat/.test(r.error));
+}
+// ubah usulan oleh panitia
+{
+  const prop = await Q.getProposalByCode(propCode);
+  r = await A.updateProposalAction(null, fd({ id: prop.id, name: "Terpal Bambu Tebal", qty_label: "4 Lembar", unit: "Lembar", category: "barang", note: "Diperbarui" }));
+  check("panitia bisa mengubah usulan", r.ok === true);
+  check("nama usulan berubah", (await Q.getProposalByCode(propCode)).name === "Terpal Bambu Tebal");
+}
+// setujui → jadi item resmi
+{
+  const prop = await Q.getProposalByCode(propCode);
+  const before = (await Q.getItemsWithStatus(1)).length;
+  r = await A.decideProposalAction(null, fd({ id: prop.id, decision: "approved", note: "Silakan, bermanfaat" }));
+  check("setujui usulan berhasil", r.ok === true);
+  const after = await Q.getItemsWithStatus(1);
+  check("usulan disetujui jadi item resmi", after.length === before + 1 && after.some((i) => i.name === "Terpal Bambu Tebal"));
+  const prop2 = await Q.getProposalByCode(propCode);
+  check("status usulan approved + link item", prop2.status === "approved" && prop2.approved_item_id != null);
+  check("riwayat usulan bertambah", (await SL.getStatusLogs("proposal", prop.id)).length >= 2);
+  // tidak bisa diputuskan dua kali
+  r = await A.decideProposalAction(null, fd({ id: prop.id, decision: "rejected" }));
+  check("usulan sudah diputuskan tidak bisa diubah lagi", r.ok === false);
+}
+// tolak usulan lain
+r = await A.submitProposalAction(null, fd({ event_id: 1, name: "Barang Tidak Perlu", nickname: "Pengusul 2", contact: "081234500002" }));
+{
+  const prop = await Q.getProposalByCode(r.code);
+  const rej = await A.decideProposalAction(null, fd({ id: prop.id, decision: "rejected", note: "Belum dibutuhkan" }));
+  check("tolak usulan berhasil", rej.ok === true && (await Q.getProposalByCode(r.code)).status === "rejected");
+}
+// guard: usulan tanpa login tidak bisa diputuskan
+{
+  jar.clear();
+  const prop = await Q.getProposalByCode(propCode);
+  r = await A.decideProposalAction(null, fd({ id: prop.id, decision: "approved" }));
+  check("putuskan usulan tanpa login ditolak", r.ok === false);
+  try { await A.loginAction(null, fd({ password: "cigatas-berbagi" })); } catch {}
+}
+// rate limit: >8 per jam per kontak ditolak
+{
+  let blocked = false;
+  for (let i = 0; i < 10; i++) {
+    const rr = await A.submitProposalAction(null, fd({ event_id: 1, name: "Spam " + i, nickname: "Spammer", contact: "089999999999" }));
+    if (!rr.ok && /jam/.test(rr.error || "")) { blocked = true; break; }
+  }
+  check("rate limitmemblokir spam", blocked);
+}
+
+console.log("== Fase 4: riwayat status pengajuan infaq ==");
+{
+  const openItem = (await Q.getItemsWithStatus(1)).find((i) => i.is_open) || (await Q.getItemsWithStatus(1))[0];
+  const rr = await A.submitHelpAction(null, fd({ item_id: openItem.id, nickname: "Ikhwan Riwayat", qty: 2, unit: "Kg", contact: "081234500010" }));
+  check("pengajuan infaq berhasil", rr.ok === true);
+  const tracked = await Q.getSubmissionByCode(rr.code);
+  const logs = await SL.getStatusLogs("submission", tracked.id);
+  check("pengajuan infaq punya riwayat awal", logs.length >= 1 && logs[0].status === "pending");
+  await A.decideSubmissionAction(tracked.id, "approved", "Disetujui");
+  const logs2 = await SL.getStatusLogs("submission", tracked.id);
+  check("riwayat bertambah setelah keputusan", logs2.length >= 2 && logs2.some((l) => l.status === "approved"));
+}
+
+console.log("== Fase 4: WhatsApp panitia & dashboard ==");
+r = await A.setPanitiaWaAction(null, fd({ panitia_wa: "0812-3456-7890" }));
+check("set WA panitia berhasil", r.ok === true);
+check("WA panitia ternormalisasi 62", (await Q.getPanitiaWa()) === "6281234567890");
+{
+  const counts = await Q.getDashboardCounts();
+  check("dashboard punya proposalsPending", typeof counts.proposalsPending === "number");
 }
 
 console.log("== Logout ==");

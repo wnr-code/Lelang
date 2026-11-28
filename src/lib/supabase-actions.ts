@@ -2,8 +2,9 @@
 // Dipanggil oleh actions.ts bila isSupabaseConfigured() true.
 // revalidatePath tetap ditangani di actions.ts (Next.js).
 import { getSupabase, throwIfError, TABLES, PHOTO_BUCKET } from "./supabase";
-import { newTrackCode, slugify } from "./auth";
+import { newTrackCode, newProposalCode, slugify } from "./auth";
 import { mapPhoto } from "./mappers";
+import { logStatus } from "./status-log";
 import type { SubmissionStatus } from "./types";
 
 const DECISION_MESSAGE: Record<SubmissionStatus, string> = {
@@ -308,6 +309,7 @@ export async function sbToggleReceived(id: number, received: boolean): Promise<R
       .eq("id", f.submission_id)
       .in("status", ["approved", "done"]);
     throwIfError(subErr, "toggleReceived(status pengajuan)");
+    await logStatus("submission", Number(f.submission_id), received ? "done" : "approved", received ? "Penerimaan barang diverifikasi panitia." : "Tanda diterima dibatalkan panitia.", "panitia");
   }
   return ok(received ? "Barang ditandai diterima." : "Tanda diterima dibatalkan.");
 }
@@ -413,4 +415,122 @@ export async function sbDeletePhoto(id: number): Promise<Res> {
   const { error: delErr } = await sb.from(TABLES.photos).delete().eq("id", id);
   throwIfError(delErr, "deletePhoto");
   return ok("Foto dihapus.");
+}
+
+// ---------- Usulan item baru (proposal) ----------
+
+export async function sbSubmitProposal(p: {
+  eventId: number;
+  name: string;
+  qty: number | null;
+  qtyLabel: string;
+  unit: string;
+  category: "sembako" | "barang" | "tenaga" | "lainnya";
+  nickname: string;
+  contact: string;
+  note: string;
+}): Promise<Res> {
+  const sb = getSupabase();
+  let code = newProposalCode();
+  for (let i = 0; i < 8; i++) {
+    const { data, error } = await sb.from(TABLES.item_proposals).select("id").eq("track_code", code).maybeSingle();
+    throwIfError(error, "submitProposal(cek kode)");
+    if (!data) break;
+    code = newProposalCode();
+  }
+  const { data, error } = await sb
+    .from(TABLES.item_proposals)
+    .insert({
+      event_id: p.eventId,
+      name: p.name,
+      qty: p.qty,
+      qty_label: p.qtyLabel,
+      unit: p.unit,
+      category: p.category,
+      nickname: p.nickname,
+      contact: p.contact,
+      note: p.note,
+      status: "pending",
+      track_code: code,
+    })
+    .select("id")
+    .single();
+  throwIfError(error, "submitProposal");
+  return ok("Usulan terkirim! Menunggu persetujuan panitia.", { code, id: Number(data!.id) });
+}
+
+export async function sbUpdateProposal(p: {
+  id: number;
+  name: string;
+  qty: number | null;
+  qtyLabel: string;
+  unit: string;
+  category: "sembako" | "barang" | "tenaga" | "lainnya";
+  note: string;
+}): Promise<Res> {
+  const { error } = await getSupabase()
+    .from(TABLES.item_proposals)
+    .update({ name: p.name, qty: p.qty, qty_label: p.qtyLabel, unit: p.unit, category: p.category, note: p.note })
+    .eq("id", p.id);
+  throwIfError(error, "updateProposal");
+  return ok("Usulan diperbarui.");
+}
+
+export async function sbDecideProposal(p: {
+  id: number;
+  decision: "approved" | "rejected";
+  note: string;
+  name?: string;
+  targetLabel?: string;
+  unit?: string;
+  category?: "sembako" | "barang" | "tenaga" | "lainnya";
+  noteItem?: string;
+}): Promise<Res> {
+  const sb = getSupabase();
+  const { data: prop, error } = await sb.from(TABLES.item_proposals).select("*").eq("id", p.id).maybeSingle();
+  throwIfError(error, "decideProposal(baca)");
+  if (!prop) return fail("Usulan tidak ditemukan.");
+  const row = prop as Record<string, unknown>;
+  if (row.status !== "pending") return fail("Usulan ini sudah diputuskan sebelumnya.");
+
+  let approvedItemId: number | null = null;
+  if (p.decision === "approved") {
+    const category = (p.category ?? String(row.category)) as "sembako" | "barang" | "tenaga" | "lainnya";
+    const kind = category === "tenaga" ? "tenaga" : "barang";
+    const name = (p.name ?? String(row.name)).slice(0, 100);
+    const unit = (p.unit ?? String(row.unit ?? "")).slice(0, 30);
+    const qtyLabel = String(row.qty_label ?? "");
+    const qty = row.qty == null ? null : Number(row.qty);
+    const targetLabel = (p.targetLabel ?? (qtyLabel || (qty != null ? `${qty}${unit ? " " + unit : ""}` : "Secukupnya"))).slice(0, 80);
+    const targetQty = parseTargetQtyServer(targetLabel);
+    const itemRes = await sbAddItem({
+      eventId: Number(row.event_id),
+      name,
+      targetQty,
+      targetLabel,
+      unit,
+      note: (p.noteItem ?? String(row.note ?? "")).slice(0, 1000),
+      kind,
+      category,
+    });
+    if (!itemRes.ok) return itemRes;
+    approvedItemId = itemRes.id ?? null;
+  }
+  const { error: upErr } = await sb
+    .from(TABLES.item_proposals)
+    .update({ status: p.decision, decided_at: nowISO(), decision_note: p.note.slice(0, 300), approved_item_id: approvedItemId })
+    .eq("id", p.id);
+  throwIfError(upErr, "decideProposal");
+  return ok(p.decision === "approved" ? "Usulan disetujui & menjadi kebutuhan resmi." : "Usulan ditolak.", { id: approvedItemId ?? undefined });
+}
+
+function parseTargetQtyServer(targetLabel: string): number | null {
+  const m = targetLabel.replace(",", ".").match(/^(\d+(?:\.\d+)?)/);
+  return m ? Number(m[1]) : null;
+}
+
+export async function sbSetPanitiaWa(wa: string): Promise<Res> {
+  const { error } = await getSupabase().from(TABLES.app_settings).upsert({ key: "panitia_wa", value: wa });
+  throwIfError(error, "setPanitiaWa");
+  return ok("Nomor WhatsApp panitia disimpan.");
 }

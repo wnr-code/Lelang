@@ -2,8 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { UserRound } from "lucide-react";
 import { NotifBell } from "@/components/notif-bell";
+import { FooterLeaves } from "@/components/footer-leaves";
 import type { ItemStatus, SubmissionStatus } from "@/lib/types";
-import { ITEM_STATUS_LABEL, SUBMISSION_STATUS_LABEL } from "@/lib/types";
+import { ITEM_STATUS_LABEL, SUBMISSION_STATUS_LABEL, PROPOSAL_STATUS_LABEL } from "@/lib/types";
+import type { ProposalStatus } from "@/lib/types";
 
 /** Logo + nama + subjudul resmi: CIGATAS · Korwil Cigatas · Bersama dalam Kebaikan. */
 export function BrandMark({ size = "md", href = "/" }: { size?: "sm" | "md"; href?: string }) {
@@ -43,15 +45,8 @@ export function PublicFooter() {
           <Link href="/panitia" className="hover:underline">Panitia</Link>
         </nav>
         <div className="relative overflow-hidden rounded-[22px] shadow-[0_8px_24px_rgba(7,91,53,0.18)]">
-          <Image
-            src="/images/footer-leaves.webp"
-            alt=""
-            width={1400}
-            height={280}
-            className="absolute inset-0 h-full w-full object-cover"
-            aria-hidden
-          />
-          <div className="relative px-6 py-6 text-center">
+          <FooterLeaves />
+          <div className="relative px-6 py-7 text-center">
             <p lang="ar" dir="rtl" className="text-2xl leading-relaxed text-white">اللهُ يَجْزِيكُمْ خَيْرًا</p>
             <p className="mt-1 text-[12px] italic text-emerald-50">“Semoga Allah membalas kebaikan Anda”</p>
           </div>
@@ -93,6 +88,15 @@ export function SubmissionStatusChip({ status }: { status: SubmissionStatus }) {
     done: "bg-emerald-600 text-white",
   };
   return <span className={`chip ${cls[status] ?? cls.pending}`}>{SUBMISSION_STATUS_LABEL[status] ?? "Menunggu konfirmasi"}</span>;
+}
+
+export function ProposalStatusChip({ status }: { status: ProposalStatus }) {
+  const cls: Record<ProposalStatus, string> = {
+    pending: "bg-amber-100 text-amber-800",
+    approved: "bg-emerald-100 text-emerald-800",
+    rejected: "bg-rose-100 text-rose-700",
+  };
+  return <span className={`chip ${cls[status] ?? cls.pending}`}>{PROPOSAL_STATUS_LABEL[status] ?? "Menunggu persetujuan"}</span>;
 }
 
 export function ProgressBar({ value, max, className = "" }: { value: number; max: number; className?: string }) {

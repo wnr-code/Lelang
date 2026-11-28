@@ -8,6 +8,7 @@ import {
   mapFulfillment,
   mapSurplus,
   mapPhoto,
+  mapProposal,
 } from "./mappers";
 import { computeItemsWithStatus } from "./item-status";
 import type {
@@ -18,6 +19,7 @@ import type {
   FulfillmentRow,
   SurplusRow,
   PhotoRow,
+  ItemProposalRow,
 } from "./types";
 
 type Raw = Record<string, unknown>;
@@ -263,6 +265,7 @@ export async function sbGetDashboardCounts(): Promise<{
   unresolvedSurplus: number;
   members: number;
   items: number;
+  proposalsPending: number;
 }> {
   const sb = getSupabase();
   const countOf = async (table: string, apply: (q: any) => any): Promise<number> => {
@@ -270,15 +273,58 @@ export async function sbGetDashboardCounts(): Promise<{
     throwIfError(error, `count(${table})`);
     return count ?? 0;
   };
-  const [pending, active, archived, unresolvedSurplus, items, nicknames] = await Promise.all([
+  const [pending, active, archived, unresolvedSurplus, items, proposalsPending, nicknames] = await Promise.all([
     countOf(TABLES.submissions, (q) => q.eq("status", "pending")),
     countOf(TABLES.events, (q) => q.eq("status", "active")),
     countOf(TABLES.events, (q) => q.in("status", ["completed", "archived"])),
     countOf(TABLES.surplus, (q) => q.eq("outcome", "")),
     countOf(TABLES.items, (q) => q),
+    countOf(TABLES.item_proposals, (q) => q.eq("status", "pending")),
     sb.from(TABLES.submissions).select("nickname").limit(5000),
   ]);
   throwIfError(nicknames.error, "count(members)");
   const members = new Set((nicknames.data ?? []).map((r: { nickname: string }) => String(r.nickname).trim().toLowerCase())).size;
-  return { pending, active, archived, unresolvedSurplus, members, items };
+  return { pending, active, archived, unresolvedSurplus, members, items, proposalsPending };
+}
+
+// ---------- Usulan item baru (proposal) ----------
+
+export type ProposalJoined = ItemProposalRow & { event_title: string; event_slug: string };
+
+export async function sbGetProposals(eventId?: number, status?: string): Promise<ProposalJoined[]> {
+  let q = getSupabase().from(TABLES.item_proposals).select("*, events(title, slug)");
+  if (eventId) q = q.eq("event_id", eventId);
+  if (status && status !== "all") q = q.eq("status", status);
+  const { data, error } = await q;
+  throwIfError(error, "getProposals");
+  const mapped = (data ?? []).map((r) => {
+    const ev = ((r as Raw).events ?? {}) as Raw;
+    return { ...mapProposal(r as Raw), event_title: String(ev.title ?? ""), event_slug: String(ev.slug ?? "") };
+  });
+  mapped.sort((a, b) => {
+    const pa = a.status === "pending" ? 0 : 1;
+    const pb = b.status === "pending" ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1;
+    return b.id - a.id;
+  });
+  return mapped;
+}
+
+export async function sbGetProposalByCode(code: string): Promise<ProposalJoined | undefined> {
+  const { data, error } = await getSupabase()
+    .from(TABLES.item_proposals)
+    .select("*, events(title, slug)")
+    .eq("track_code", code)
+    .maybeSingle();
+  throwIfError(error, "getProposalByCode");
+  if (!data) return undefined;
+  const ev = ((data as Raw).events ?? {}) as Raw;
+  return { ...mapProposal(data as Raw), event_title: String(ev.title ?? ""), event_slug: String(ev.slug ?? "") };
+}
+
+export async function sbGetPanitiaWa(): Promise<string> {
+  const { data, error } = await getSupabase().from(TABLES.app_settings).select("value").eq("key", "panitia_wa").maybeSingle();
+  throwIfError(error, "getPanitiaWa");
+  return data?.value ? String(data.value) : "";
 }

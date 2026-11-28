@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import { redirect } from "next/navigation";
 import {
   Users, CalendarDays, Package, Inbox, ChevronRight, MapPin, TrendingUp, BarChart3,
-  HandHeart, LayoutGrid, CalendarPlus, Gift, ClipboardList, Recycle,
+  HandHeart, LayoutGrid, CalendarPlus, Gift, ClipboardList, Recycle, Lightbulb,
 } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
 import { getDashboardCounts, getActiveEvents, getSubmissions } from "@/lib/queries";
@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 const MENUS = [
   { href: "/panitia/kegiatan", title: "Kelola Kegiatan", desc: "Buat & atur kegiatan", icon: CalendarPlus, tile: "bg-emerald-50", ic: "bg-emerald-600" },
   { href: "/panitia/pengajuan", title: "Kelola Pengajuan", desc: "Verifikasi bantuan anggota", icon: ClipboardList, tile: "bg-sky-50", ic: "bg-sky-600" },
+  { href: "/panitia/usulan", title: "Kelola Usulan", desc: "Setujui usulan item baru", icon: Lightbulb, tile: "bg-amber-50", ic: "bg-amber-500" },
   { href: "/panitia/kebutuhan", title: "Kelola Kebutuhan", desc: "Daftar barang & tenaga", icon: Package, tile: "bg-amber-50", ic: "bg-amber-500" },
   { href: "/panitia/barang", title: "Kelola Barang", desc: "Penerimaan & penanggung jawab", icon: Gift, tile: "bg-violet-50", ic: "bg-violet-600" },
   { href: "/panitia/laporan", title: "Laporan & Sisa", desc: "Hasil kegiatan & sisa barang", icon: Recycle, tile: "bg-emerald-50", ic: "bg-emerald-700" },
@@ -61,6 +62,14 @@ export default async function PanitiaDashboard() {
         <Stat icon={Package} label="Kebutuhan" value={counts.items} caption="item tercatat" tile="bg-amber-50" ic="text-amber-500" />
         <Stat icon={Inbox} label="Menunggu" value={counts.pending} caption="perlu verifikasi" tile="bg-violet-50" ic="text-violet-500" />
       </div>
+
+      {counts.proposalsPending > 0 && (
+        <Link href="/panitia/usulan" className="flex items-center gap-3 rounded-[20px] bg-amber-50 px-4 py-3.5 ring-1 ring-amber-200 transition hover:shadow-md">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white"><Lightbulb className="h-5 w-5" /></span>
+          <p className="flex-1 text-[13px] font-extrabold text-amber-900">{counts.proposalsPending} usulan item baru menunggu persetujuan</p>
+          <ChevronRight className="h-4 w-4 shrink-0 text-amber-600" />
+        </Link>
+      )}
 
       {/* Menu utama terpisah */}
       <section>
