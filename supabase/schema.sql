@@ -162,3 +162,43 @@ alter table public.push_subscriptions enable row level security;
 alter table public.event_rsvps enable row level security;
 alter table public.push_reminders enable row level security;
 alter table public.app_settings enable row level security;
+
+-- ------------------------------------------------------------
+-- Fase 4: usulan item baru, riwayat status, proteksi spam (rate limit).
+-- Terpisah dari submissions (pengajuan infaq) & fulfillments (penerimaan).
+-- ------------------------------------------------------------
+create table if not exists public.item_proposals (
+  id bigint generated always as identity primary key,
+  event_id bigint not null references public.events(id) on delete cascade,
+  name text not null,
+  qty double precision,
+  qty_label text not null default '',
+  unit text not null default '',
+  category text not null default 'barang' check (category in ('sembako','barang','tenaga','lainnya')),
+  nickname text not null,
+  contact text not null default '',
+  note text not null default '',
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  track_code text not null unique,
+  created_at timestamptz not null default now(),
+  decided_at timestamptz,
+  decision_note text not null default '',
+  approved_item_id bigint references public.items(id) on delete set null
+);
+create table if not exists public.status_logs (
+  id bigint generated always as identity primary key,
+  entity_type text not null check (entity_type in ('submission','proposal')),
+  entity_id bigint not null,
+  status text not null,
+  note text not null default '',
+  actor text not null default 'sistem' check (actor in ('anggota','panitia','sistem')),
+  created_at timestamptz not null default now()
+);
+create table if not exists public.rate_limits (
+  key text primary key,
+  window_start timestamptz not null,
+  count integer not null default 0
+);
+alter table public.item_proposals enable row level security;
+alter table public.status_logs enable row level security;
+alter table public.rate_limits enable row level security;

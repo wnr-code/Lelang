@@ -4,13 +4,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  Home, CalendarDays, ClipboardList, Package, Gift, BarChart3, Settings, LogOut,
+  Home, CalendarDays, ClipboardList, Package, Gift, BarChart3, Settings, LogOut, Lightbulb,
 } from "lucide-react";
 
 const ITEMS = [
   { href: "/panitia", label: "Dashboard", icon: Home },
   { href: "/panitia/kegiatan", label: "Kelola Kegiatan", icon: CalendarDays },
   { href: "/panitia/pengajuan", label: "Kelola Pengajuan", icon: ClipboardList, badge: true },
+  { href: "/panitia/usulan", label: "Kelola Usulan", icon: Lightbulb, badgeProposal: true },
   { href: "/panitia/kebutuhan", label: "Kelola Kebutuhan", icon: Package },
   { href: "/panitia/barang", label: "Kelola Barang", icon: Gift },
   { href: "/panitia/laporan", label: "Laporan", icon: BarChart3 },
@@ -24,9 +25,11 @@ function isActive(pathname: string, href: string) {
 /** Sidebar panitia (layar besar) — meniru tata letak referensi Android. */
 export function AdminSidebar({
   pendingCount,
+  proposalCount = 0,
   logoutAction,
 }: {
   pendingCount: number;
+  proposalCount?: number;
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -34,8 +37,9 @@ export function AdminSidebar({
     <aside className="hidden w-[236px] shrink-0 lg:block">
       <div className="sticky top-[86px] overflow-hidden rounded-[22px] bg-white shadow-[0_6px_20px_rgba(7,91,53,0.07)] ring-1 ring-emerald-900/5">
         <nav className="space-y-1 p-3">
-          {ITEMS.map(({ href, label, icon: Icon, badge }) => {
+          {ITEMS.map(({ href, label, icon: Icon, badge, badgeProposal }) => {
             const active = isActive(pathname, href);
+            const count = badgeProposal ? proposalCount : pendingCount;
             return (
               <Link
                 key={href}
@@ -48,9 +52,9 @@ export function AdminSidebar({
               >
                 <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-white" : "text-emerald-700"}`} strokeWidth={2} />
                 <span className="flex-1 truncate">{label}</span>
-                {badge && pendingCount > 0 && (
+                {(badge || badgeProposal) && count > 0 && (
                   <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-extrabold text-white">
-                    {pendingCount > 9 ? "9+" : pendingCount}
+                    {count > 9 ? "9+" : count}
                   </span>
                 )}
               </Link>
@@ -84,16 +88,17 @@ export function AdminSidebar({
 }
 
 /** Navigasi bawah panitia (layar kecil / Android). */
-export function AdminNav({ pendingCount = 0 }: { pendingCount?: number }) {
+export function AdminNav({ pendingCount = 0, proposalCount = 0 }: { pendingCount?: number; proposalCount?: number }) {
   const pathname = usePathname();
   if (!pathname.startsWith("/panitia") || pathname.startsWith("/panitia/login")) return null;
-  const items = ITEMS.filter((i) => i.href !== "/panitia/kebutuhan" && i.href !== "/panitia/pengaturan");
+  const items = ITEMS.filter((i) => i.href !== "/panitia/kebutuhan" && i.href !== "/panitia/pengaturan" && i.href !== "/panitia/laporan");
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-emerald-900/10 bg-white/95 backdrop-blur lg:hidden">
       <div className="mx-auto flex max-w-3xl items-stretch justify-around px-1">
-        {items.map(({ href, label, icon: Icon, badge }) => {
+        {items.map(({ href, label, icon: Icon, badge, badgeProposal }) => {
           const active = isActive(pathname, href);
           const short = label.replace("Kelola ", "");
+          const count = badgeProposal ? proposalCount : pendingCount;
           return (
             <Link
               key={href}
@@ -103,9 +108,9 @@ export function AdminNav({ pendingCount = 0 }: { pendingCount?: number }) {
               <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.9} />
               {short}
               <span className={`h-[3px] w-6 rounded-full ${active ? "bg-emerald-600" : "bg-transparent"}`} />
-              {badge && pendingCount > 0 && (
+              {(badge || badgeProposal) && count > 0 && (
                 <span className="absolute right-[22%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-extrabold text-white ring-2 ring-white">
-                  {pendingCount > 9 ? "9+" : pendingCount}
+                  {count > 9 ? "9+" : count}
                 </span>
               )}
             </Link>

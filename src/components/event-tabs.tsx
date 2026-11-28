@@ -21,7 +21,7 @@ const DESC: Record<ItemCategory, string> = {
 };
 
 /** Kebutuhan acara dibagi per kategori dengan tab agar rapi, tidak menumpuk panjang. */
-export function EventTabs({ items, isActive, slug }: { items: ItemWithStatus[]; isActive: boolean; slug: string }) {
+export function EventTabs({ items, isActive, slug, panitiaWa = "" }: { items: ItemWithStatus[]; isActive: boolean; slug: string; panitiaWa?: string }) {
   const groups = useMemo(() => {
     const map = new Map<ItemCategory, ItemWithStatus[]>();
     for (const c of ITEM_CATEGORY_ORDER) map.set(c, []);
@@ -72,7 +72,7 @@ export function EventTabs({ items, isActive, slug }: { items: ItemWithStatus[]; 
 
       <div role="tabpanel" className="mt-3 space-y-3">
         {shown.map((it) => (
-          <ItemCard key={it.id} item={it} isActive={isActive} slug={slug} />
+          <ItemCard key={it.id} item={it} isActive={isActive} slug={slug} panitiaWa={panitiaWa} />
         ))}
       </div>
     </div>

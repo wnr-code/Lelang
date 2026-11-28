@@ -32,6 +32,13 @@ html {
   font-size: 17px;
 }
 
+/* Cegah geser melebar ke pinggir (overflow horizontal) di semua halaman. */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   background-color: #f7fcf8;
   color: var(--color-ink);

@@ -46,14 +46,14 @@ export default async function PanitiaLayout({ children }: { children: React.Reac
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl gap-5 px-4 py-5">
-        <AdminSidebar pendingCount={counts.pending} logoutAction={logoutAction} />
+        <AdminSidebar pendingCount={counts.pending} proposalCount={counts.proposalsPending} logoutAction={logoutAction} />
         <main className="min-w-0 flex-1 pb-24 lg:pb-8">{children}</main>
       </div>
 
       <footer className="border-t border-emerald-900/5 py-4 text-center text-[12px] text-stone-400">
         Lelang Kebaikan Cigatas · Korwil Cigatas · Bersama dalam Kebaikan
       </footer>
-      <AdminNav pendingCount={counts.pending} />
+      <AdminNav pendingCount={counts.pending} proposalCount={counts.proposalsPending} />
     </div>
   );
 }

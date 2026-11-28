@@ -9,6 +9,7 @@ import type {
   FulfillmentRow,
   SurplusRow,
   PhotoRow,
+  ItemProposalRow,
 } from "./types";
 
 /** timestamptz ISO ("2026-11-27T10:00:00+00:00") -> "2026-11-27 10:00:00" (UTC). */
@@ -127,5 +128,28 @@ export function mapPhoto(r: Raw): PhotoRow {
     file_path: String(r.file_path),
     caption: String(r.caption ?? ""),
     created_at: normTs(r.created_at) ?? "",
+  };
+}
+
+export function mapProposal(r: Raw): ItemProposalRow {
+  return {
+    id: Number(r.id),
+    event_id: Number(r.event_id),
+    name: String(r.name),
+    qty: r.qty == null ? null : Number(r.qty),
+    qty_label: String(r.qty_label ?? ""),
+    unit: String(r.unit ?? ""),
+    category: (["sembako", "barang", "tenaga", "lainnya"].includes(String(r.category))
+      ? String(r.category)
+      : "barang") as ItemProposalRow["category"],
+    nickname: String(r.nickname),
+    contact: String(r.contact ?? ""),
+    note: String(r.note ?? ""),
+    status: r.status as ItemProposalRow["status"],
+    track_code: String(r.track_code),
+    created_at: normTs(r.created_at) ?? "",
+    decided_at: normTs(r.decided_at),
+    decision_note: String(r.decision_note ?? ""),
+    approved_item_id: r.approved_item_id == null ? null : Number(r.approved_item_id),
   };
 }

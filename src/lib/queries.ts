@@ -20,8 +20,12 @@ import {
   sbGetSurplus,
   sbGetPhotos,
   sbGetDashboardCounts,
+  sbGetProposals,
+  sbGetProposalByCode,
+  sbGetPanitiaWa,
   type SubmissionJoined,
   type SubmissionTracked,
+  type ProposalJoined,
 } from "./supabase-queries";
 import { computeItemsWithStatus, deriveItemStatus, fmtQty } from "./item-status";
 import type {
@@ -34,6 +38,7 @@ import type {
 } from "./types";
 
 export { deriveItemStatus, fmtQty };
+export type { SubmissionJoined, SubmissionTracked, ProposalJoined };
 
 export async function getActiveEvents(): Promise<EventRow[]> {
   if (isSupabaseConfigured()) return sbGetActiveEvents();
@@ -176,6 +181,7 @@ export async function getDashboardCounts(): Promise<{
   unresolvedSurplus: number;
   members: number;
   items: number;
+  proposalsPending: number;
 }> {
   if (isSupabaseConfigured()) return sbGetDashboardCounts();
   const { getDb } = await loadSqliteDb();
@@ -186,5 +192,43 @@ export async function getDashboardCounts(): Promise<{
   const unresolvedSurplus = (db.prepare("SELECT COUNT(*) AS c FROM surplus WHERE outcome = ''").get() as { c: number }).c;
   const members = (db.prepare("SELECT COUNT(DISTINCT nickname) AS c FROM submissions").get() as { c: number }).c;
   const items = (db.prepare("SELECT COUNT(*) AS c FROM items").get() as { c: number }).c;
-  return { pending, active, archived, unresolvedSurplus, members, items };
+  const proposalsPending = (db.prepare("SELECT COUNT(*) AS c FROM item_proposals WHERE status = 'pending'").get() as { c: number }).c;
+  return { pending, active, archived, unresolvedSurplus, members, items, proposalsPending };
+}
+
+// ---------- Usulan item baru (proposal) ----------
+
+export async function getProposals(eventId?: number, status?: string): Promise<ProposalJoined[]> {
+  if (isSupabaseConfigured()) return sbGetProposals(eventId, status);
+  const { getDb } = await loadSqliteDb();
+  const db = getDb();
+  const where: string[] = [];
+  const params: Array<number | string> = [];
+  if (eventId) { where.push("p.event_id = ?"); params.push(eventId); }
+  if (status && status !== "all") { where.push("p.status = ?"); params.push(status); }
+  const sql = `
+    SELECT p.*, e.title AS event_title, e.slug AS event_slug
+    FROM item_proposals p JOIN events e ON e.id = p.event_id
+    ${where.length ? "WHERE " + where.join(" AND ") : ""}
+    ORDER BY CASE p.status WHEN 'pending' THEN 0 ELSE 1 END, p.created_at DESC, p.id DESC`;
+  return db.prepare(sql).all(...params) as unknown as ProposalJoined[];
+}
+
+export async function getProposalByCode(code: string): Promise<ProposalJoined | undefined> {
+  if (isSupabaseConfigured()) return sbGetProposalByCode(code);
+  const { getDb } = await loadSqliteDb();
+  return getDb()
+    .prepare(
+      `SELECT p.*, e.title AS event_title, e.slug AS event_slug
+       FROM item_proposals p JOIN events e ON e.id = p.event_id WHERE p.track_code = ?`
+    )
+    .get(code) as unknown as ProposalJoined | undefined;
+}
+
+/** Nomor WhatsApp panitia untuk tombol konfirmasi (disetel di Pengaturan panitia). */
+export async function getPanitiaWa(): Promise<string> {
+  if (isSupabaseConfigured()) return sbGetPanitiaWa();
+  const { getDb } = await loadSqliteDb();
+  const row = getDb().prepare("SELECT value FROM app_settings WHERE key = 'panitia_wa'").get() as { value: string } | undefined;
+  return row?.value || "";
 }

@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Copy, Check, Send, X, Package, HandHeart, Clock3 } from "lucide-react";
+import { Send, X, Package, HandHeart, Clock3 } from "lucide-react";
 import { submitHelpAction } from "@/lib/actions";
 import { NICKNAME_KEY, CONTACT_KEY } from "@/components/member-settings";
 import { UNIT_OPTIONS } from "@/lib/types";
+import { AntiSpamFields } from "@/components/anti-spam";
+import { SubmissionSuccess } from "@/components/submission-success";
 import type { ItemWithStatus } from "@/lib/types";
 
-export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug: string }) {
+export function HelpForm({ item, eventSlug, panitiaWa = "" }: { item: ItemWithStatus; eventSlug: string; panitiaWa?: string }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -59,29 +61,14 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
 
   if (code) {
     return (
-      <div className="rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-200">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-extrabold text-emerald-900">Pengajuan terkirim!</p>
-            <p className="mt-1 text-xs leading-relaxed text-emerald-800">
-              Panitia akan memverifikasi pengajuanmu. Simpan kode ini untuk melacak statusnya:
-            </p>
-            <div className="mt-3 flex items-center gap-2">
-              <code className="rounded-lg bg-white px-3 py-2 text-base font-extrabold tracking-widest text-emerald-700 ring-1 ring-emerald-200">{code}</code>
-              <button onClick={copyCode} className="btn-ghost text-emerald-700" aria-label="Salin kode">
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </button>
-            </div>
-            <a href={`/lacak/${code}`} className="btn-primary mt-3 w-full text-xs">
-              Lacak Pengajuanku
-            </a>
-            <button onClick={() => { setCode(""); setOpen(false); }} className="mt-2 w-full text-center text-xs font-semibold text-emerald-700 hover:underline">
-              Tutup
-            </button>
-          </div>
-        </div>
-      </div>
+      <SubmissionSuccess
+        code={code}
+        kind="infaq"
+        itemName={item.name}
+        nickname={nickname}
+        panitiaWa={panitiaWa}
+        onClose={() => { setCode(""); setOpen(false); }}
+      />
     );
   }
 
@@ -95,7 +82,8 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl bg-emerald-50/60 p-4 ring-1 ring-emerald-100">
+    <form onSubmit={handleSubmit} className="relative rounded-2xl bg-emerald-50/60 p-4 ring-1 ring-emerald-100">
+      <AntiSpamFields />
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-extrabold text-ink">{isTenaga ? "Bantuan Tenaga" : "Infaq Barang"}: {item.name}</p>
