@@ -2,21 +2,28 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { HandHeart, Lock, ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import { Lock, ArrowLeft } from "lucide-react";
 import { loginAction } from "@/lib/actions";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, null);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-cream px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-emerald-50 px-4">
       <div className="w-full max-w-sm">
         <div className="text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md">
-            <HandHeart className="h-7 w-7" />
-          </span>
+          <Image
+            src="/images/logo-cigatas.webp"
+            alt="Logo Cigatas"
+            width={1420}
+            height={945}
+            className="mx-auto h-20 w-auto"
+            priority
+          />
           <h1 className="mt-4 text-xl font-extrabold text-ink">Masuk Panitia</h1>
-          <p className="mt-1 text-xs text-stone-400">Lelang Kebaikan Cigatas · Pusat Kendali</p>
+          <p className="mt-1 text-xs text-stone-500">Lelang Kebaikan Cigatas · Korwil Cigatas</p>
+          <p className="text-[11px] italic text-emerald-700">Bersama dalam Kebaikan</p>
         </div>
 
         <form action={formAction} className="card mt-6 space-y-4 px-5 py-6">

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Copy, Check, Send, X } from "lucide-react";
 import { submitHelpAction } from "@/lib/actions";
+import { NICKNAME_KEY, CONTACT_KEY } from "@/components/member-settings";
 import type { ItemWithStatus } from "@/lib/types";
 
 export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug: string }) {
@@ -12,7 +13,17 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [contact, setContact] = useState("");
   const router = useRouter();
+
+  // Prefill dari Pengaturan (tersimpan di perangkat anggota, bukan di server).
+  useEffect(() => {
+    try {
+      setNickname(localStorage.getItem(NICKNAME_KEY) || "");
+      setContact(localStorage.getItem(CONTACT_KEY) || "");
+    } catch {}
+  }, []);
 
   const hasNumericTarget = item.target_qty != null;
 
@@ -25,6 +36,10 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
       const res = await submitHelpAction(null, fd);
       if (res.ok) {
         setCode(res.code || "");
+        try {
+          localStorage.setItem(NICKNAME_KEY, nickname.trim().slice(0, 80));
+          localStorage.setItem(CONTACT_KEY, contact.trim().slice(0, 80));
+        } catch {}
         router.refresh();
       } else {
         setError(res.error);
@@ -86,7 +101,16 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
       <div className="space-y-3">
         <div>
           <label className="label" htmlFor={`nickname-${item.id}`}>Nama panggilan</label>
-          <input id={`nickname-${item.id}`} name="nickname" required maxLength={80} placeholder="mis. Kang Asep" className="input" />
+          <input
+            id={`nickname-${item.id}`}
+            name="nickname"
+            required
+            maxLength={80}
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="mis. Kang Asep"
+            className="input"
+          />
         </div>
         <div>
           <label className="label" htmlFor={`qty-${item.id}`}>
@@ -105,7 +129,18 @@ export function HelpForm({ item, eventSlug }: { item: ItemWithStatus; eventSlug:
         </div>
         <div>
           <label className="label" htmlFor={`contact-${item.id}`}>Nomor WhatsApp (wajib)</label>
-          <input id={`contact-${item.id}`} name="contact" type="tel" inputMode="tel" required maxLength={80} placeholder="mis. 0812xxxx (untuk follow up panitia)" className="input" />
+          <input
+            id={`contact-${item.id}`}
+            name="contact"
+            type="tel"
+            inputMode="tel"
+            required
+            maxLength={80}
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="mis. 0812xxxx (untuk follow up panitia)"
+            className="input"
+          />
           <p className="mt-1 text-[11px] text-stone-400">Wajib diisi agar panitia/admin bisa menghubungimu. Hanya terlihat oleh panitia.</p>
         </div>
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}

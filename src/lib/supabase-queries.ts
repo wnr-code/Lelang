@@ -257,6 +257,8 @@ export async function sbGetDashboardCounts(): Promise<{
   active: number;
   archived: number;
   unresolvedSurplus: number;
+  members: number;
+  items: number;
 }> {
   const sb = getSupabase();
   const countOf = async (table: string, apply: (q: any) => any): Promise<number> => {
@@ -264,11 +266,15 @@ export async function sbGetDashboardCounts(): Promise<{
     throwIfError(error, `count(${table})`);
     return count ?? 0;
   };
-  const [pending, active, archived, unresolvedSurplus] = await Promise.all([
+  const [pending, active, archived, unresolvedSurplus, items, nicknames] = await Promise.all([
     countOf(TABLES.submissions, (q) => q.eq("status", "pending")),
     countOf(TABLES.events, (q) => q.eq("status", "active")),
     countOf(TABLES.events, (q) => q.in("status", ["completed", "archived"])),
     countOf(TABLES.surplus, (q) => q.eq("outcome", "")),
+    countOf(TABLES.items, (q) => q),
+    sb.from(TABLES.submissions).select("nickname").limit(5000),
   ]);
-  return { pending, active, archived, unresolvedSurplus };
+  throwIfError(nicknames.error, "count(members)");
+  const members = new Set((nicknames.data ?? []).map((r: { nickname: string }) => String(r.nickname).trim().toLowerCase())).size;
+  return { pending, active, archived, unresolvedSurplus, members, items };
 }

@@ -1,4 +1,4 @@
-// Informasi pengajian rutin bulanan Koordinator Cigatas (Majelis Qurrotul Ain).
+// Informasi pengajian rutin bulanan Korwil Cigatas.
 // Dipakai di beranda & halaman informasi sebagai pengumuman tetap.
 
 export const ROUTINE = {

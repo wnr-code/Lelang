@@ -1,47 +1,53 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, Archive, ShieldCheck, Info } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { NotifBell } from "@/components/notif-bell";
 import type { ItemStatus, SubmissionStatus } from "@/lib/types";
 import { ITEM_STATUS_LABEL } from "@/lib/types";
 
-export function Logo({ compact = false }: { compact?: boolean }) {
+/** Logo + nama + subjudul resmi: CIGATAS · Korwil Cigatas · Bersama dalam Kebaikan. */
+export function BrandMark({ size = "md", href = "/" }: { size?: "sm" | "md"; href?: string }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5" aria-label="Lelang Kebaikan Cigatas — beranda">
+    <Link href={href} className="flex min-w-0 items-center gap-2.5" aria-label="Lelang Kebaikan Cigatas — beranda">
       <Image
         src="/images/logo-cigatas.webp"
-        alt="Lelang Kebaikan Cigatas"
+        alt="Logo Cigatas"
         width={1420}
         height={945}
-        className={compact ? "h-9 w-auto" : "h-12 w-auto"}
+        className={size === "sm" ? "h-9 w-auto shrink-0" : "h-11 w-auto shrink-0"}
         priority
       />
+      <span className="min-w-0 leading-tight">
+        <span className={`block font-extrabold tracking-tight text-emerald-800 ${size === "sm" ? "text-base" : "text-lg"}`}>
+          CIGATAS
+        </span>
+        <span className="block truncate text-[10px] font-semibold text-ink/70">Korwil Cigatas</span>
+        <span className="block truncate text-[10px] italic text-emerald-700">Bersama dalam Kebaikan</span>
+      </span>
     </Link>
   );
 }
 
+export function Logo({ compact = false }: { compact?: boolean }) {
+  return <BrandMark size={compact ? "sm" : "md"} />;
+}
+
 export function PublicHeader({ notif = 0 }: { notif?: number }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-stone-900/5 bg-cream/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/images/logo-cigatas.webp" alt="Cigatas" width={1420} height={945} className="h-11 w-auto" />
-          <span className="leading-tight">
-            <span className="block text-base font-extrabold tracking-tight text-emerald-900">CIGATAS</span>
-            <span className="block text-[10px] font-semibold text-stone-500">Koordinator Majelis Qurrotul Ain</span>
-            <span className="block text-[10px] italic text-emerald-700">Bersama dalam Kebaikan</span>
-          </span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <NotifBell count={notif} href="/#kegiatan" />
-          <nav className="hidden items-center gap-1 sm:flex">
-            <Link href="/tentang" className="btn-ghost"><Info className="h-4 w-4" /><span>Tentang</span></Link>
-            <Link href="/arsip" className="btn-ghost"><Archive className="h-4 w-4" /><span>Arsip</span></Link>
-          </nav>
-          <Link href="/panitia" className="btn-ghost text-stone-500" title="Panitia">
-            <ShieldCheck className="h-4 w-4" />
-          </Link>
+    <header className="sticky top-0 z-40 border-b border-emerald-900/5 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex h-[70px] max-w-3xl items-center gap-1 px-4">
+        <div className="min-w-0 flex-1">
+          <BrandMark />
         </div>
+        <NotifBell count={notif} href="/#informasi" label="Informasi kegiatan" />
+        <Link
+          href="/pengaturan"
+          aria-label="Profil & pengaturan"
+          title="Profil & pengaturan"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-200"
+        >
+          <UserRound className="h-5 w-5" strokeWidth={2} />
+        </Link>
       </div>
     </header>
   );
@@ -49,24 +55,32 @@ export function PublicHeader({ notif = 0 }: { notif?: number }) {
 
 export function PublicFooter() {
   return (
-    <footer className="mt-16 border-t border-stone-900/5 bg-white/60">
-      <div className="mx-auto max-w-3xl px-4 pt-8 pb-24 text-center sm:pb-8">
+    <footer className="mt-10 pb-24 sm:pb-6">
+      <div className="mx-auto max-w-3xl px-4">
         <nav className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-bold text-emerald-700">
           <Link href="/tentang" className="hover:underline">Tentang</Link>
           <Link href="/arsip" className="hover:underline">Arsip Kegiatan</Link>
           <Link href="/lacak" className="hover:underline">Lacak Bantuan</Link>
           <Link href="/panitia" className="hover:underline">Panitia</Link>
         </nav>
-        <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-emerald-700">
-          <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
-          Satu Kepedulian, Banyak Kebaikan
+        <div className="relative overflow-hidden rounded-[22px] shadow-[0_8px_24px_rgba(7,91,53,0.18)]">
+          <Image
+            src="/images/footer-leaves.webp"
+            alt=""
+            width={1400}
+            height={280}
+            className="absolute inset-0 h-full w-full object-cover"
+            aria-hidden
+          />
+          <div className="relative px-6 py-6 text-center">
+            <p lang="ar" dir="rtl" className="text-2xl leading-relaxed text-white">اللهُ يَجْزِيكُمْ خَيْرًا</p>
+            <p className="mt-1 text-[11px] italic text-emerald-50">“Semoga Allah membalas kebaikan Anda”</p>
+          </div>
+        </div>
+        <p className="mt-4 text-center text-[11px] leading-relaxed text-stone-400">
+          Lelang Kebaikan Cigatas · Korwil Cigatas<br />
+          Tidak ada nominal uang di halaman publik. Bantuan berbentuk barang, sembako & tenaga.
         </p>
-        <p className="mt-2 text-xs text-stone-500">
-          Lelang Kebaikan Cigatas · Papan gotong royong digital komunitas
-        </p>
-        <p className="mt-1 text-xs text-stone-400">Tidak ada nominal uang. Semua bantuan berbentuk barang & kesediaan.</p>
-        <p className="mt-3 text-sm font-bold text-emerald-800">اللهُ يَجْزِيكُمْ خَيْرًا</p>
-        <p className="text-[11px] italic text-stone-400">“Semoga Allah membalas kebaikan Anda”</p>
       </div>
     </footer>
   );
@@ -93,18 +107,19 @@ export function ItemStatusChip({ status }: { status: ItemStatus }) {
 
 export function SubmissionStatusChip({ status }: { status: SubmissionStatus }) {
   const map: Record<SubmissionStatus, { label: string; cls: string }> = {
-    pending: { label: "Menunggu keputusan", cls: "bg-amber-100 text-amber-800" },
+    pending: { label: "Menunggu konfirmasi", cls: "bg-amber-100 text-amber-800" },
     approved: { label: "Disetujui", cls: "bg-emerald-100 text-emerald-800" },
     rejected: { label: "Ditolak", cls: "bg-rose-100 text-rose-700" },
   };
-  return <span className={`chip ${map[status].cls}`}>{map[status].label}</span>;
+  const s = map[status] ?? map.pending;
+  return <span className={`chip ${s.cls}`}>{s.label}</span>;
 }
 
 export function ProgressBar({ value, max, className = "" }: { value: number; max: number; className?: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div className={`h-2 w-full overflow-hidden rounded-full bg-stone-100 ${className}`}>
-      <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+      <div className="h-full rounded-full bg-gradient-to-r from-emerald-700 to-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -112,11 +127,50 @@ export function ProgressBar({ value, max, className = "" }: { value: number; max
 export function EmptyState({ icon, title, subtitle }: { icon?: React.ReactNode; title: string; subtitle?: string }) {
   return (
     <div className="card flex flex-col items-center gap-2 px-6 py-10 text-center">
-      {icon && <div className="text-stone-300">{icon}</div>}
+      {icon && <div className="text-emerald-200">{icon}</div>}
       <p className="text-sm font-bold text-stone-600">{title}</p>
       {subtitle && <p className="max-w-xs text-xs text-stone-400">{subtitle}</p>}
     </div>
   );
+}
+
+/** Avatar vektor inisial (tanpa foto orang), warna konsisten per nama. */
+export function Avatar({ name, className = "h-10 w-10 text-xs" }: { name: string; className?: string }) {
+  const tones = [
+    "bg-emerald-100 text-emerald-800",
+    "bg-sky-100 text-sky-800",
+    "bg-amber-100 text-amber-800",
+    "bg-violet-100 text-violet-800",
+    "bg-rose-100 text-rose-700",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % 997;
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+  return (
+    <span className={`flex shrink-0 items-center justify-center rounded-full font-extrabold ${tones[hash % tones.length]} ${className}`}>
+      {initials}
+    </span>
+  );
+}
+
+/** "2 jam yang lalu" dari teks waktu UTC "YYYY-MM-DD HH:MM:SS". */
+export function relativeTime(s: string): string {
+  const d = new Date(s.includes("T") ? s : s.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return s;
+  const diff = Date.now() - d.getTime();
+  const min = Math.round(diff / 60000);
+  if (min < 1) return "baru saja";
+  if (min < 60) return `${min} menit lalu`;
+  const hour = Math.round(min / 60);
+  if (hour < 24) return `${hour} jam lalu`;
+  const day = Math.round(hour / 24);
+  if (day < 30) return `${day} hari lalu`;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function formatDate(dateStr: string | null): string {

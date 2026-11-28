@@ -16,7 +16,7 @@ const PURPOSES = [
   { icon: Package, title: "Memenuhi kebutuhan kegiatan", desc: "Daftar kebutuhan acara warga (beras, kopi, air, dll.) terpenuhi lewat bantuan anggota." },
   { icon: HandHeart, title: "Menyalurkan kesediaan membantu", desc: "Anggota cukup menawarkan bantuan barang/tenaga; panitia yang mengatur penyalurannya." },
   { icon: Users, title: "Transparansi progres", desc: "Semua warga bisa melihat item mana yang sudah terpenuhi, dalam proses, atau masih dibuka." },
-  { icon: Recycle, title: "Mengelola sisa barang", desc: "Barang sisa/berlebih dicatat dan diputuskan: disimpan, dipakai lagi, ditukar, atau dijual kembali." },
+  { icon: Recycle, title: "Mengelola sisa barang", desc: "Barang sisa/berlebih dicatat dan diputuskan: disimpan, digunakan untuk kegiatan berikutnya, ditukar, dijual kembali, atau disalurkan." },
   { icon: Archive, title: "Arsip kebaikan", desc: "Kegiatan yang selesai tersimpan rapi sebagai riwayat gotong royong komunitas." },
 ];
 
@@ -60,7 +60,9 @@ export default function TentangPage() {
             Papan gotong royong digital komunitas Cigatas. Tempat warga menawarkan bantuan untuk
             memenuhi kebutuhan kegiatan bersama — <b>tanpa akun, tanpa nominal uang</b>.
           </p>
-          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-emerald-700">
+          <p className="mt-3 text-sm font-extrabold text-emerald-800">Korwil Cigatas</p>
+          <p className="text-xs italic text-emerald-700">Bersama dalam Kebaikan</p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-stone-400">
             Satu Kepedulian, Banyak Kebaikan
           </p>
         </section>
