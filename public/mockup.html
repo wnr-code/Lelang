@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup UI/UX — Lelang Kebaikan Cigatas</title>
+<style>
+  :root{
+    --bg:#FAF5EC; --surface:#FFFFFF; --ink:#2A2620; --muted:#8A8177;
+    --primary:#0B7A55; --primary-soft:#E5F2EC; --accent:#E9A23B; --accent-soft:#FBF0DC;
+    --rose:#E4577B; --line:#EFE7DA; --shadow:0 10px 30px rgba(42,38,32,.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg); color:var(--ink); font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Plus Jakarta Sans",sans-serif; padding:28px 16px 60px;}
+  .wrap{max-width:1180px; margin:0 auto;}
+  .pagehead{text-align:center; margin-bottom:26px;}
+  .pagehead .tag{display:inline-block; background:var(--accent-soft); color:#9A6A1F; font-weight:800; font-size:11px; letter-spacing:.12em; text-transform:uppercase; padding:6px 14px; border-radius:999px;}
+  .pagehead h1{font-size:26px; font-weight:800; margin-top:12px; letter-spacing:-.02em;}
+  .pagehead p{color:var(--muted); margin-top:6px; font-size:13px;}
+  .phones{display:flex; flex-wrap:wrap; gap:26px; justify-content:center; align-items:flex-start;}
+  .phone{width:340px; background:#1d1a16; border-radius:42px; padding:10px; box-shadow:var(--shadow);}
+  .screen{background:var(--bg); border-radius:34px; overflow:hidden; height:660px; overflow-y:auto; position:relative;}
+  .screen::-webkit-scrollbar{width:0;}
+  .notch{height:26px; display:flex; justify-content:center; align-items:center;}
+  .notch span{width:90px; height:8px; background:#1d1a16; border-radius:999px; opacity:.85;}
+  .inner{padding:14px 16px 20px;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .brand{display:flex; align-items:center; gap:9px;}
+  .mark{width:36px; height:36px; border-radius:12px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:17px;}
+  .brand b{font-size:14px; font-weight:800; display:block; line-height:1.1;}
+  .brand small{color:var(--muted); font-size:10px; font-weight:600;}
+  .iconbtn{width:32px; height:32px; border-radius:10px; background:var(--surface); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:14px;}
+  .chip{display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:800; padding:5px 11px; border-radius:999px;}
+  .chip.green{background:var(--primary-soft); color:var(--primary);}
+  .chip.amber{background:var(--accent-soft); color:#9A6A1F;}
+  .chip.sky{background:#E3F0F7; color:#20647E;}
+  .chip.rose{background:#FBE7EC; color:#B03A5B;}
+  .hero{text-align:center; padding:6px 0 14px;}
+  .hero h2{font-size:22px; font-weight:800; letter-spacing:-.02em; margin-top:10px;}
+  .hero p{color:var(--muted); font-size:12px; margin-top:6px;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); padding:16px; margin-bottom:14px;}
+  .card h3{font-size:15px; font-weight:800;}
+  .meta{color:var(--muted); font-size:11px; margin-top:3px;}
+  .bar{height:8px; background:#F0E9DD; border-radius:999px; overflow:hidden; margin:10px 0 4px;}
+  .bar i{display:block; height:100%; background:linear-gradient(90deg,var(--primary),#3BA57C); border-radius:999px;}
+  .progress-label{font-size:11px; font-weight:700; color:var(--primary);}
+  .need{display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--line); font-size:12px;}
+  .need:last-child{border-bottom:0;}
+  .btn{display:flex; align-items:center; justify-content:center; gap:7px; width:100%; border:0; cursor:pointer; font-weight:800; font-size:13px; padding:12px; border-radius:16px; margin-top:10px;}
+  .btn.primary{background:var(--primary); color:#fff;}
+  .btn.warm{background:var(--accent); color:#3E2B07;}
+  .btn.ghost{background:var(--surface); border:1px solid var(--line); color:var(--ink);}
+  .note{font-size:10.5px; color:var(--muted); text-align:center; margin-top:10px;}
+  .sect{font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:16px 0 8px;}
+  .crumb{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700;}
+  .crumb .sep{color:var(--accent);}
+  .row{display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); font-size:12px;}
+  .row:last-child{border-bottom:0;}
+  .row .role{font-weight:700;}
+  .row .name{color:var(--muted);}
+  .wa{display:flex; align-items:center; gap:9px; background:var(--primary-soft); border-radius:14px; padding:10px 12px; margin-top:8px; font-size:12px; font-weight:700; color:var(--primary);}
+  .wa .b{width:28px; height:28px; border-radius:9px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px;}
+  .tabs{display:flex; gap:6px; margin:10px 0;}
+  .tabs span{flex:1; text-align:center; font-size:11px; font-weight:800; padding:8px 4px; border-radius:12px; background:var(--surface); border:1px solid var(--line); color:var(--muted);}
+  .tabs span.on{background:var(--primary); border-color:var(--primary); color:#fff;}
+  .field{margin-top:8px;}
+  .field label{font-size:10.5px; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;}
+  .field .in{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:12px; color:var(--muted);}
+  .nav{position:sticky; bottom:0; display:flex; justify-content:space-around; background:rgba(255,255,255,.92); backdrop-filter:blur(8px); border-top:1px solid var(--line); padding:10px 6px; font-size:9.5px; font-weight:700; color:var(--muted);}
+  .nav div{display:flex; flex-direction:column; align-items:center; gap:3px;}
+  .nav .on{color:var(--primary);}
+  .nav .ic{font-size:15px;}
+  .plan{max-width:820px; margin:34px auto 0; background:var(--surface); border:1px solid var(--line); border-radius:24px; box-shadow:var(--shadow); padding:22px;}
+  .plan h2{font-size:17px; font-weight:800; margin-bottom:10px;}
+  .plan ul{list-style:none;}
+  .plan li{padding:7px 0; border-bottom:1px dashed var(--line); font-size:13px; display:flex; gap:9px;}
+  .plan li:last-child{border-bottom:0;}
+  .plan .ok{color:var(--primary); font-weight:800;}
+  .plan .ask{color:#9A6A1F; font-weight:800;}
+  @media (max-width:760px){ .phone{width:100%; max-width:360px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="pagehead">
+    <span class="tag">Mockup · Belum Live</span>
+    <h1>Lelang Kebaikan Cigatas — UI/UX Hangat, Modern, Simple</h1>
+    <p>Koordinator Cigatas · Majelis Qurrotul Ain · “Dari kita, untuk kita.”</p>
+  </div>
+
+  <div class="phones">
+    <!-- ============ PHONE 1 : BERANDA ============ -->
+    <div class="phone"><div class="screen">
+      <div class="notch"><span></span></div>
+      <div class="inner">
+        <div class="topbar">
+          <div class="brand"><div class="mark">🤝</div><div><b>Cigatas</b><small>Majelis Qurrotul Ain</small></div></div>
+          <div class="iconbtn">☰</div>
+        </div>
+        <div class="hero">
+          <span class="chip green">🕌 Koordinator Cigatas</span>
+          <h2>Mari Berbagi Kebaikan ❤️</h2>
+          <p>Pantau kegiatan & berinfaq untuk acara bersama. Dari kita, untuk kita.</p>
+        </div>
+        <div class="card">
+          <span class="chip amber"> Akan Datang</span>
+          <h3 style="margin-top:8px;">Liqo Akbar</h3>
+          <div class="meta">📅 Selasa, 23 Desember 2026 · 📍 Masjid Qurrotul Ain</div>
+          <div class="bar"><i style="width:55%"></i></div>
+          <div class="progress-label">5 dari 9 item terpenuhi</div>
+          <div style="margin-top:8px;">
+            <div class="need"><span>Beras 40 Kg</span><span class="chip green">Terpenuhi</span></div>
+            <div class="need"><span>Sembako &amp; bumbu</span><span class="chip amber">Dalam proses</span></div>
+            <div class="need"><span>Perlengkapan dapur</span><span class="chip sky">Dibuka</span></div>
+          </div>
+          <button class="btn primary">🤲 Saya Ingin Membantu</button>
+          <button class="btn warm">💝 Infaq untuk Kegiatan</button>
+          <div class="note">Infaq dana dikelola panitia → dibelikan sembako. Nominal tidak ditampilkan publik.</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:13px;">Kegiatan Pengajian Lainnya</h3>
+          <div class="meta">Liqo pekanan · Maulid · Isra Mi’raj · Santunan</div>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="on"><span class="ic">🏠</span>Beranda</div>
+        <div><span class="ic">📅</span>Kegiatan</div>
+        <div><span class="ic">ℹ️</span>Tentang</div>
+        <div><span class="ic">📞</span>Kontak</div>
+      </div>
+    </div></div>
+
+    <!-- ============ PHONE 2 : TENTANG & KONTAK ============ -->
+    <div class="phone"><div class="screen">
+      <div class="notch"><span></span></div>
+      <div class="inner">
+        <div class="topbar">
+          <div class="brand"><div class="mark">🕌</div><div><b>Tentang &amp; Struktur</b><small>Majelis Qurrotul Ain</small></div></div>
+          <div class="iconbtn">←</div>
+        </div>
+        <div class="card">
+          <div class="crumb"><span>Majelis Qurrotul Ain</span><span class="sep">›</span><span style="color:var(--primary);">Koordinator Cigatas</span></div>
+          <p style="font-size:12px; color:var(--muted); margin-top:8px;">
+            Cigatas adalah koordinator di bawah Majelis Qurrotul Ain. Kami rutin mengadakan pengajian
+            &amp; kegiatan pada tanggal tertentu. Anggota grup WA dapat memantau dan berinfaq —
+            suatu amaliah bersama.
+          </p>
+        </div>
+        <div class="sect">Struktur Koordinator Cigatas</div>
+        <div class="card">
+          <div class="row"><span class="role">Ketua</span><span class="name">(nama ketua)</span></div>
+          <div class="row"><span class="role">Sekretaris</span><span class="name">(nama)</span></div>
+          <div class="row"><span class="role">Bendahara</span><span class="name">(nama)</span></div>
+          <div class="row"><span class="role">Koord. Dapur</span><span class="name">(nama)</span></div>
+          <div class="row"><span class="role">Koord. Acara</span><span class="name">(nama)</span></div>
+          <div class="row"><span class="role">Koord. Humas</span><span class="name">(nama)</span></div>
+        </div>
+        <div class="sect">Kontak Panitia / Pengurus</div>
+        <div class="card">
+          <div class="wa"><span class="b">✆</span> Ketua Cigatas · WhatsApp</div>
+          <div class="wa"><span class="b">✆</span> Panitia Liqo Akbar · WhatsApp</div>
+          <div class="wa"><span class="b">✆</span> Bendahara · WhatsApp</div>
+          <div class="note">Nomor &amp; nama asli akan diisi sesuai struktur tercatat.</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:13px;">Koordinator Saudara</h3>
+          <div class="meta">Mangsa · Ciputat · dan lainnya — semua di bawah Majelis Qurrotul Ain, masing-masing punya ketua &amp; struktur tercatat.</div>
+        </div>
+      </div>
+      <div class="nav">
+        <div><span class="ic">🏠</span>Beranda</div>
+        <div><span class="ic">📅</span>Kegiatan</div>
+        <div class="on"><span class="ic">ℹ️</span>Tentang</div>
+        <div><span class="ic">📞</span>Kontak</div>
+      </div>
+    </div></div>
+
+    <!-- ============ PHONE 3 : KEGIATAN / INFAQ ============ -->
+    <div class="phone"><div class="screen">
+      <div class="notch"><span></span></div>
+      <div class="inner">
+        <div class="topbar">
+          <div class="brand"><div class="mark">📅</div><div><b>Liqo Akbar</b><small>23 Desember 2026</small></div></div>
+          <div class="iconbtn">←</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:13px;">Kebutuhan Kegiatan</h3>
+          <div class="need"><span>🍚 Beras 40 Kg</span><span class="chip green">Terpenuhi</span></div>
+          <div class="need"><span>🛒 Sembako &amp; bumbu</span><span class="chip amber">Proses</span></div>
+          <div class="need"><span>🍳 Perlengkapan dapur</span><span class="chip sky">Dibuka</span></div>
+          <div class="need"><span>🥤 Air mineral</span><span class="chip sky">Dibuka</span></div>
+        </div>
+        <div class="sect">Pilih Bentuk Bantuan</div>
+        <div class="card">
+          <div class="tabs"><span>Barang</span><span>Tenaga</span><span class="on">Infaq Dana</span></div>
+          <p style="font-size:11px; color:var(--muted);">Infaq dana akan dibelikan sembako oleh panitia untuk menjamu tamu dari berbagai koordinator.</p>
+          <div class="field"><label>Nama panggilan</label><div class="in">mis. Kang Asep</div></div>
+          <div class="field"><label>Kesediaan / jumlah</label><div class="in">mis. 5 Kg / secukupnya</div></div>
+          <button class="btn primary">Kirim &amp; Dapatkan Kode Lacak</button>
+          <div class="note">Tanpa akun. Nominal uang tidak dipublikasikan; panitia mencatat &amp; membelikan sembako.</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:13px;">Upload Foto Dokumentasi</h3>
+          <div class="meta">Maks <b>2 MB</b> · dikompres otomatis di HP &amp; server.</div>
+          <button class="btn ghost">📷 Pilih Foto (≤2 MB)</button>
+        </div>
+      </div>
+      <div class="nav">
+        <div><span class="ic">🏠</span>Beranda</div>
+        <div class="on"><span class="ic">📅</span>Kegiatan</div>
+        <div><span class="ic">ℹ️</span>Tentang</div>
+        <div><span class="ic">📞</span>Kontak</div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ============ RENCANA ============ -->
+  <div class="plan">
+    <h2>Rencana Perubahan (menunggu persetujuan Anda)</h2>
+    <ul>
+      <li><span class="ok">✓</span> Batas upload foto <b>2 MB</b> + kompres otomatis di HP &amp; server (sudah disiapkan di kode).</li>
+      <li><span class="ok">✓</span> UI/UX lebih <b>hangat, modern, simple</b>: cream hangat, aksen amber, kartu membulat, bayangan lembut.</li>
+      <li><span class="ok">✓</span> <b>Kontak Panitia / Pengurus</b> wajib ada (tombol WhatsApp) di Tentang &amp; footer.</li>
+      <li><span class="ok">✓</span> Konteks <b>Majelis Qurrotul Ain → Koordinator Cigatas</b> + struktur ketua tercatat.</li>
+      <li><span class="ok">✓</span> Contoh kegiatan <b>Liqo Akbar 23 Desember</b> (sembako &amp; dapur) + opsi <b>Infaq Dana → dibelikan sembako</b> (nominal tidak dipublikasikan).</li>
+      <li><span class="ask">?</span> Mohon kirim <b>nama &amp; nomor WA pengurus</b> (Ketua, Sekretaris, Bendahara, koord. dapur/acara/humas) agar kontak bisa diisi asli.</li>
+      <li><span class="ask">?</span> Konfirmasi: apakah nominal infaq boleh terlihat <b>hanya oleh panitia</b> (tidak publik)? Saat ini dirancang tidak dipublikasikan.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

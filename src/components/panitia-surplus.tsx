@@ -7,7 +7,7 @@ import { addSurplusAction, updateSurplusAction, deleteSurplusAction, uploadPhoto
 import type { SurplusRow, PhotoRow, ItemWithStatus } from "@/lib/types";
 import { SURPLUS_DECISION_LABEL, SURPLUS_CONDITION_LABEL } from "@/lib/types";
 import Image from "next/image";
-import { compressImageForUpload } from "@/lib/client-image";
+import { compressImageForUpload, MAX_UPLOAD_BYTES } from "@/lib/client-image";
 
 function useAction() {
   const [pending, startTransition] = useTransition();
@@ -212,11 +212,11 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
           fd.set("event_id", String(eventId));
           run(async () => {
             const raw = fd.get("photo");
-            if (raw instanceof File && raw.size > 15 * 1024 * 1024) {
-              return { ok: false as const, error: "Ukuran foto maksimal 15 MB. Pilih foto yang lebih kecil." };
-            }
             if (raw instanceof File && raw.size > 0) {
               const compressed = await compressImageForUpload(raw);
+              if (compressed.size > MAX_UPLOAD_BYTES) {
+                return { ok: false as const, error: "Foto masih lebih dari 2 MB setelah dikompres. Pilih foto yang lebih kecil." };
+              }
               fd.set("photo", compressed, compressed.name);
             }
             const r = await uploadPhotoAction(null, fd);
@@ -247,7 +247,7 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
         <button type="submit" disabled={pending} className="btn-primary w-full py-2.5 text-xs">
           <Upload className="h-3.5 w-3.5" /> {pending ? "Mengompres & mengupload..." : "Upload Foto"}
         </button>
-        <p className="text-center text-[11px] text-stone-400">Foto dikompres otomatis di HP lalu di server ke WebP maks. 1600px — hemat kuota warga.</p>
+        <p className="text-center text-[11px] text-stone-400">Maks 2 MB — foto dikompres otomatis di HP & server (WebP) agar hemat kuota warga.</p>
       </form>
 
       {photos.length > 0 && (

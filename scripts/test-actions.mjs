@@ -136,18 +136,19 @@ const meta = await sharp(fpath).metadata();
 check("terkompres ≤1600px", meta.width <= 1600);
 check("format webp", meta.format === "webp");
 
-console.log("== Upload foto besar (>1 MB) ==");
+console.log("== Batas upload foto 2 MB ==");
 const { randomBytes } = await import("node:crypto");
-const raw = randomBytes(2000 * 2000 * 3);
-const bigBuf = await sharp(raw, { raw: { width: 2000, height: 2000, channels: 3 } }).jpeg({ quality: 95 }).toBuffer();
-check("foto uji >1 MB", bigBuf.length > 1024 * 1024);
+const raw = randomBytes(2400 * 2400 * 3);
+const bigBuf = await sharp(raw, { raw: { width: 2400, height: 2400, channels: 3 } }).jpeg({ quality: 95 }).toBuffer();
+check("foto uji >2 MB", bigBuf.length > 2 * 1024 * 1024);
 const bigFile = new File([bigBuf], "besar.jpg", { type: "image/jpeg" });
 const fdBig = new FormData();
 fdBig.set("event_id", "1");
 fdBig.set("caption", "Foto besar");
 fdBig.set("photo", bigFile);
 r = await A.uploadPhotoAction(null, fdBig);
-check("upload foto >1 MB berhasil", r.ok === true);
+check("upload >2 MB ditolak", r.ok === false);
+check("pesan error menyebut 2 MB", /2 MB/.test(r.error || ""));
 
 console.log("== Validasi input ==");
 r = await A.submitHelpAction(null, fd({ item_id: 6, nickname: "", qty: 5 }));

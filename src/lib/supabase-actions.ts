@@ -351,7 +351,7 @@ export async function sbUploadPhoto(eventId: number, caption: string, fileBytes:
       return fail("Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.");
     }
     if (/size|large|payload|entity|too big/i.test(msg)) {
-      return fail("Foto terlalu besar. Maksimal 15 MB.");
+      return fail("Foto terlalu besar. Maksimal 2 MB.");
     }
     return fail("Gagal memproses foto. Coba lagi dengan foto JPG/PNG/WebP yang lebih kecil.");
   }
