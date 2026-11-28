@@ -7,6 +7,7 @@ import { addSurplusAction, updateSurplusAction, deleteSurplusAction, uploadPhoto
 import type { SurplusRow, PhotoRow, ItemWithStatus } from "@/lib/types";
 import { SURPLUS_DECISION_LABEL, SURPLUS_CONDITION_LABEL } from "@/lib/types";
 import Image from "next/image";
+import { compressImageForUpload } from "@/lib/client-image";
 
 function useAction() {
   const [pending, startTransition] = useTransition();
@@ -69,7 +70,7 @@ export function SurplusSection({ eventId, items, surplus }: { eventId: number; i
           </div>
           <div>
             <label className="label">Nama barang</label>
-            <input name="item_name" maxLength={60} className="input py-2.5 text-xs" placeholder="mis. Beras" />
+            <input name="item_name" maxLength={100} className="input py-2.5 text-xs" placeholder="mis. Beras" />
           </div>
           <div>
             <label className="label">Jumlah</label>
@@ -77,7 +78,7 @@ export function SurplusSection({ eventId, items, surplus }: { eventId: number; i
           </div>
           <div>
             <label className="label">Label jumlah</label>
-            <input name="qty_label" maxLength={40} className="input py-2.5 text-xs" placeholder="mis. 2 Kg" />
+            <input name="qty_label" maxLength={80} className="input py-2.5 text-xs" placeholder="mis. 2 Kg" />
           </div>
           <div>
             <label className="label">Kondisi</label>
@@ -94,15 +95,15 @@ export function SurplusSection({ eventId, items, surplus }: { eventId: number; i
           </div>
           <div className="col-span-2">
             <label className="label">Alasan / catatan keputusan</label>
-            <input name="decision_note" maxLength={300} className="input py-2.5 text-xs" placeholder="mis. Masih tersegel, layak disimpan" />
+            <input name="decision_note" maxLength={1000} className="input py-2.5 text-xs" placeholder="mis. Masih tersegel, layak disimpan" />
           </div>
           <div>
             <label className="label">Penanggung jawab</label>
-            <input name="pic_name" maxLength={40} className="input py-2.5 text-xs" placeholder="mis. Teh Nisa" />
+            <input name="pic_name" maxLength={80} className="input py-2.5 text-xs" placeholder="mis. Teh Nisa" />
           </div>
           <div>
             <label className="label">Hasil (jika sudah)</label>
-            <input name="outcome" maxLength={300} className="input py-2.5 text-xs" placeholder="mis. Ditukar 3 kg gula" />
+            <input name="outcome" maxLength={1000} className="input py-2.5 text-xs" placeholder="mis. Ditukar 3 kg gula" />
           </div>
           {error && <p className="col-span-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
           <button type="submit" disabled={pending} className="btn-primary col-span-2 py-2.5 text-xs">
@@ -179,15 +180,15 @@ function SurplusCard({ s }: { s: SurplusRow }) {
           </div>
           <div>
             <label className="label">Penanggung jawab</label>
-            <input name="pic_name" defaultValue={s.pic_name} maxLength={40} className="input py-2 text-xs" />
+            <input name="pic_name" defaultValue={s.pic_name} maxLength={80} className="input py-2 text-xs" />
           </div>
           <div className="col-span-2">
             <label className="label">Catatan keputusan</label>
-            <input name="decision_note" defaultValue={s.decision_note} maxLength={300} className="input py-2 text-xs" />
+            <input name="decision_note" defaultValue={s.decision_note} maxLength={1000} className="input py-2 text-xs" />
           </div>
           <div className="col-span-2">
             <label className="label">Hasil pelaksanaan</label>
-            <input name="outcome" defaultValue={s.outcome} maxLength={300} className="input py-2 text-xs" placeholder="mis. Sudah ditukar dengan 3 kg gula pasir" />
+            <input name="outcome" defaultValue={s.outcome} maxLength={1000} className="input py-2 text-xs" placeholder="mis. Sudah ditukar dengan 3 kg gula pasir" />
           </div>
           <button type="submit" disabled={pending} className="btn-primary col-span-2 py-2 text-xs"><Check className="h-3.5 w-3.5" /> Simpan Perubahan</button>
         </form>
@@ -206,9 +207,22 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const fd = new FormData(e.currentTarget);
+          const form = e.currentTarget;
+          const fd = new FormData(form);
           fd.set("event_id", String(eventId));
-          run(() => uploadPhotoAction(null, fd).then((r) => { if (r.ok) { setCaption(""); (e.target as HTMLFormElement).reset(); } return r; }));
+          run(async () => {
+            const raw = fd.get("photo");
+            if (raw instanceof File && raw.size > 15 * 1024 * 1024) {
+              return { ok: false as const, error: "Ukuran foto maksimal 15 MB. Pilih foto yang lebih kecil." };
+            }
+            if (raw instanceof File && raw.size > 0) {
+              const compressed = await compressImageForUpload(raw);
+              fd.set("photo", compressed, compressed.name);
+            }
+            const r = await uploadPhotoAction(null, fd);
+            if (r.ok) { setCaption(""); form.reset(); }
+            return r;
+          });
         }}
         className="card mb-3 space-y-2.5 px-5 py-4"
       >
@@ -224,7 +238,7 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
           name="caption"
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          maxLength={120}
+          maxLength={500}
           className="input py-2.5 text-xs"
           placeholder="Keterangan foto (opsional)"
         />
@@ -233,7 +247,7 @@ export function PhotoSection({ eventId, photos }: { eventId: number; photos: Pho
         <button type="submit" disabled={pending} className="btn-primary w-full py-2.5 text-xs">
           <Upload className="h-3.5 w-3.5" /> {pending ? "Mengompres & mengupload..." : "Upload Foto"}
         </button>
-        <p className="text-center text-[11px] text-stone-400">Foto dikompres otomatis ke WebP maks. 1600px — hemat kuota warga.</p>
+        <p className="text-center text-[11px] text-stone-400">Foto dikompres otomatis di HP lalu di server ke WebP maks. 1600px — hemat kuota warga.</p>
       </form>
 
       {photos.length > 0 && (

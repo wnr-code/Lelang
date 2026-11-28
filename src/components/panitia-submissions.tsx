@@ -58,7 +58,7 @@ export function SubmissionCard({ sub }: { sub: SubWithMeta }) {
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              maxLength={300}
+              maxLength={1000}
               rows={2}
               placeholder="Catatan untuk anggota (opsional), mis. instruksi penyerahan barang"
               className="input mb-2 resize-none py-2 text-xs"

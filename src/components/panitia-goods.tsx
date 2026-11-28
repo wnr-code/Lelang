@@ -94,10 +94,10 @@ export function GoodsItemCard({ item, fulfillments }: { item: ItemWithStatus; fu
           }}
           className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100"
         >
-          <input name="person_name" required maxLength={40} className="input col-span-2 py-2 text-xs" placeholder="Nama (mis. Kang Asep)" />
+          <input name="person_name" required maxLength={80} className="input col-span-2 py-2 text-xs" placeholder="Nama (mis. Kang Asep)" />
           <input name="qty" type="number" min="0" step="any" className="input py-2 text-xs" placeholder={`Jumlah${item.unit ? ` (${item.unit})` : ""}`} />
-          <input name="qty_label" maxLength={40} className="input py-2 text-xs" placeholder="Atau label (mis. 2 karung)" />
-          <input name="note" maxLength={200} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
+          <input name="qty_label" maxLength={80} className="input py-2 text-xs" placeholder="Atau label (mis. 2 karung)" />
+          <input name="note" maxLength={1000} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
           <button type="submit" disabled={pending} className="btn-primary py-2 text-xs">Tambah</button>
           <button type="button" onClick={() => setAdding(false)} className="btn-ghost py-2 text-xs">Batal</button>
         </form>

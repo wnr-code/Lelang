@@ -51,11 +51,11 @@ export function CreateEventForm() {
       </div>
       <div>
         <label className="label">Nama kegiatan</label>
-        <input name="title" required maxLength={100} placeholder="mis. Persiapan Acara Cigatas" className="input" />
+        <input name="title" required maxLength={150} placeholder="mis. Persiapan Acara Cigatas" className="input" />
       </div>
       <div>
         <label className="label">Deskripsi</label>
-        <textarea name="description" maxLength={600} rows={2} placeholder="Ajakan singkat untuk anggota" className="input resize-none" />
+        <textarea name="description" maxLength={4000} rows={2} placeholder="Ajakan singkat untuk anggota" className="input resize-none" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -64,7 +64,7 @@ export function CreateEventForm() {
         </div>
         <div>
           <label className="label">Lokasi</label>
-          <input name="location" maxLength={100} placeholder="mis. Balai Warga" className="input" />
+          <input name="location" maxLength={150} placeholder="mis. Balai Warga" className="input" />
         </div>
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
@@ -149,11 +149,11 @@ export function EventCard({ event, items }: { event: EventRow; items: ItemWithSt
         >
           <div>
             <label className="label">Nama kegiatan</label>
-            <input name="title" defaultValue={event.title} required maxLength={100} className="input" />
+            <input name="title" defaultValue={event.title} required maxLength={150} className="input" />
           </div>
           <div>
             <label className="label">Deskripsi</label>
-            <textarea name="description" defaultValue={event.description} maxLength={600} rows={2} className="input resize-none" />
+            <textarea name="description" defaultValue={event.description} maxLength={4000} rows={2} className="input resize-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -162,7 +162,7 @@ export function EventCard({ event, items }: { event: EventRow; items: ItemWithSt
             </div>
             <div>
               <label className="label">Lokasi</label>
-              <input name="location" defaultValue={event.location} maxLength={100} className="input" />
+              <input name="location" defaultValue={event.location} maxLength={150} className="input" />
             </div>
           </div>
           <div className="flex gap-2">
@@ -228,10 +228,10 @@ function ItemRow({ item }: { item: ItemWithStatus }) {
           }}
           className="mt-3 grid grid-cols-2 gap-2"
         >
-          <input name="name" defaultValue={item.name} required maxLength={60} className="input col-span-2 py-2 text-xs" placeholder="Nama item" />
-          <input name="target_label" defaultValue={item.target_label} required maxLength={40} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg)" />
-          <input name="unit" defaultValue={item.unit} maxLength={20} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus)" />
-          <input name="note" defaultValue={item.note} maxLength={200} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
+          <input name="name" defaultValue={item.name} required maxLength={100} className="input col-span-2 py-2 text-xs" placeholder="Nama item" />
+          <input name="target_label" defaultValue={item.target_label} required maxLength={80} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg)" />
+          <input name="unit" defaultValue={item.unit} maxLength={30} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus)" />
+          <input name="note" defaultValue={item.note} maxLength={1000} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
           <button type="submit" disabled={pending} className="btn-primary col-span-2 py-2 text-xs">Simpan Item</button>
         </form>
       )}
@@ -260,10 +260,10 @@ function AddItemForm({ eventId }: { eventId: number }) {
       }}
       className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100"
     >
-      <input name="name" required maxLength={60} className="input col-span-2 py-2 text-xs" placeholder="Nama item (mis. Beras)" />
-      <input name="target_label" required maxLength={40} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg / Secukupnya)" />
-      <input name="unit" maxLength={20} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus)" />
-      <input name="note" maxLength={200} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
+      <input name="name" required maxLength={100} className="input col-span-2 py-2 text-xs" placeholder="Nama item (mis. Beras)" />
+      <input name="target_label" required maxLength={80} className="input py-2 text-xs" placeholder="Target (mis. 40 Kg / Secukupnya)" />
+      <input name="unit" maxLength={30} className="input py-2 text-xs" placeholder="Satuan (Kg/Dus)" />
+      <input name="note" maxLength={1000} className="input col-span-2 py-2 text-xs" placeholder="Catatan (opsional)" />
       {error && <p className="col-span-2 text-[11px] font-semibold text-rose-600">{error}</p>}
       <button type="submit" disabled={pending} className="btn-primary py-2 text-xs">Tambah</button>
       <button type="button" onClick={() => setOpen(false)} className="btn-ghost py-2 text-xs">Batal</button>

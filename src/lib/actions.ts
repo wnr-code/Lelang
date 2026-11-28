@@ -59,11 +59,11 @@ export async function logoutAction(): Promise<void> {
 
 export async function submitHelpAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   const itemId = Number(formData.get("item_id"));
-  const nickname = String(formData.get("nickname") || "").trim().slice(0, 40);
+  const nickname = String(formData.get("nickname") || "").trim().slice(0, 80);
   const qtyRaw = String(formData.get("qty") || "").trim();
-  const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 40);
-  const message = String(formData.get("message") || "").trim().slice(0, 300);
-  const contact = String(formData.get("contact") || "").trim().slice(0, 60);
+  const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 80);
+  const message = String(formData.get("message") || "").trim().slice(0, 2000);
+  const contact = String(formData.get("contact") || "").trim().slice(0, 80);
 
   if (!nickname) return fail("Nama panggilan wajib diisi.");
   const item = await getItemById(itemId);
@@ -108,10 +108,10 @@ export async function submitHelpAction(_prev: unknown, formData: FormData): Prom
 
 export async function createEventAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
-  const title = String(formData.get("title") || "").trim().slice(0, 100);
-  const description = String(formData.get("description") || "").trim().slice(0, 600);
+  const title = String(formData.get("title") || "").trim().slice(0, 150);
+  const description = String(formData.get("description") || "").trim().slice(0, 4000);
   const eventDate = String(formData.get("event_date") || "").trim();
-  const location = String(formData.get("location") || "").trim().slice(0, 100);
+  const location = String(formData.get("location") || "").trim().slice(0, 150);
   if (!title) return fail("Nama kegiatan wajib diisi.");
 
   if (isSupabaseConfigured()) {
@@ -134,10 +134,10 @@ export async function createEventAction(_prev: unknown, formData: FormData): Pro
 export async function updateEventAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const id = Number(formData.get("id"));
-  const title = String(formData.get("title") || "").trim().slice(0, 100);
-  const description = String(formData.get("description") || "").trim().slice(0, 600);
+  const title = String(formData.get("title") || "").trim().slice(0, 150);
+  const description = String(formData.get("description") || "").trim().slice(0, 4000);
   const eventDate = String(formData.get("event_date") || "").trim();
-  const location = String(formData.get("location") || "").trim().slice(0, 100);
+  const location = String(formData.get("location") || "").trim().slice(0, 150);
   if (!title) return fail("Nama kegiatan wajib diisi.");
 
   if (isSupabaseConfigured()) {
@@ -198,10 +198,10 @@ function parseTargetQty(targetLabel: string): number | null {
 export async function addItemAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const eventId = Number(formData.get("event_id"));
-  const name = String(formData.get("name") || "").trim().slice(0, 60);
-  const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 40);
-  const unit = String(formData.get("unit") || "").trim().slice(0, 20);
-  const note = String(formData.get("note") || "").trim().slice(0, 200);
+  const name = String(formData.get("name") || "").trim().slice(0, 100);
+  const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 80);
+  const unit = String(formData.get("unit") || "").trim().slice(0, 30);
+  const note = String(formData.get("note") || "").trim().slice(0, 1000);
   if (!name) return fail("Nama item wajib diisi.");
   if (!targetLabel) return fail("Target kebutuhan wajib diisi (mis. 40 Kg atau Secukupnya).");
   const targetQty = parseTargetQty(targetLabel);
@@ -224,10 +224,10 @@ export async function addItemAction(_prev: unknown, formData: FormData): Promise
 export async function updateItemAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const id = Number(formData.get("id"));
-  const name = String(formData.get("name") || "").trim().slice(0, 60);
-  const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 40);
-  const unit = String(formData.get("unit") || "").trim().slice(0, 20);
-  const note = String(formData.get("note") || "").trim().slice(0, 200);
+  const name = String(formData.get("name") || "").trim().slice(0, 100);
+  const targetLabel = String(formData.get("target_label") || "").trim().slice(0, 80);
+  const unit = String(formData.get("unit") || "").trim().slice(0, 30);
+  const note = String(formData.get("note") || "").trim().slice(0, 1000);
   if (!name || !targetLabel) return fail("Nama dan target item wajib diisi.");
   const targetQty = parseTargetQty(targetLabel);
 
@@ -285,7 +285,7 @@ export async function decideSubmissionAction(id: number, decision: "approved" | 
   const sub = db.prepare("SELECT * FROM submissions WHERE id=?").get(id) as { item_id: number; nickname: string; qty: number | null; qty_label: string } | undefined;
   if (!sub) return fail("Pengajuan tidak ditemukan.");
   db.prepare("UPDATE submissions SET status=?, decided_at=datetime('now'), decision_note=? WHERE id=?")
-    .run(decision, note.slice(0, 300), id);
+    .run(decision, note.slice(0, 1000), id);
 
   if (decision === "approved") {
     const existing = db.prepare("SELECT 1 FROM fulfillments WHERE submission_id=?").get(id);
@@ -305,10 +305,10 @@ export async function decideSubmissionAction(id: number, decision: "approved" | 
 export async function addFulfillmentAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const itemId = Number(formData.get("item_id"));
-  const personName = String(formData.get("person_name") || "").trim().slice(0, 40);
+  const personName = String(formData.get("person_name") || "").trim().slice(0, 80);
   const qtyRaw = String(formData.get("qty") || "").trim();
-  const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 40);
-  const note = String(formData.get("note") || "").trim().slice(0, 200);
+  const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 80);
+  const note = String(formData.get("note") || "").trim().slice(0, 1000);
   if (!personName) return fail("Nama penanggung jawab / pembantu wajib diisi.");
   const item = await getItemById(itemId);
   if (!item) return fail("Item tidak ditemukan.");
@@ -379,14 +379,14 @@ export async function addSurplusAction(_prev: unknown, formData: FormData): Prom
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const eventId = Number(formData.get("event_id"));
   const itemIdRaw = String(formData.get("item_id") || "");
-  const itemName = String(formData.get("item_name") || "").trim().slice(0, 60);
+  const itemName = String(formData.get("item_name") || "").trim().slice(0, 100);
   const qtyRaw = String(formData.get("qty") || "").trim();
-  const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 40);
+  const qtyLabel = String(formData.get("qty_label") || "").trim().slice(0, 80);
   const condition = String(formData.get("condition") || "sisa");
   const decision = String(formData.get("decision") || "disimpan");
-  const decisionNote = String(formData.get("decision_note") || "").trim().slice(0, 300);
-  const picName = String(formData.get("pic_name") || "").trim().slice(0, 40);
-  const outcome = String(formData.get("outcome") || "").trim().slice(0, 300);
+  const decisionNote = String(formData.get("decision_note") || "").trim().slice(0, 1000);
+  const picName = String(formData.get("pic_name") || "").trim().slice(0, 80);
+  const outcome = String(formData.get("outcome") || "").trim().slice(0, 1000);
   if (!itemName) return fail("Nama barang wajib diisi.");
 
   let qty: number | null = null;
@@ -417,9 +417,9 @@ export async function updateSurplusAction(_prev: unknown, formData: FormData): P
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const id = Number(formData.get("id"));
   const decision = String(formData.get("decision") || "disimpan");
-  const decisionNote = String(formData.get("decision_note") || "").trim().slice(0, 300);
-  const picName = String(formData.get("pic_name") || "").trim().slice(0, 40);
-  const outcome = String(formData.get("outcome") || "").trim().slice(0, 300);
+  const decisionNote = String(formData.get("decision_note") || "").trim().slice(0, 1000);
+  const picName = String(formData.get("pic_name") || "").trim().slice(0, 80);
+  const outcome = String(formData.get("outcome") || "").trim().slice(0, 1000);
 
   if (isSupabaseConfigured()) {
     const r = await sbUpdateSurplus({ id, decision, decisionNote, picName, outcome });
@@ -453,11 +453,14 @@ export async function deleteSurplusAction(id: number): Promise<ActionResult> {
 export async function uploadPhotoAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   if (!(await guard())) return fail("Sesi panitia berakhir. Silakan login ulang.");
   const eventId = Number(formData.get("event_id"));
-  const caption = String(formData.get("caption") || "").trim().slice(0, 120);
+  const caption = String(formData.get("caption") || "").trim().slice(0, 500);
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return fail("Pilih file foto terlebih dahulu.");
-  if (file.size > 15 * 1024 * 1024) return fail("Ukuran foto maksimal 15 MB.");
-  if (!file.type.startsWith("image/")) return fail("File harus berupa gambar.");
+  if (file.size > 15 * 1024 * 1024) return fail("Ukuran foto maksimal 15 MB. Pilih foto yang lebih kecil.");
+  const looksLikeImage = file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name);
+  if (!looksLikeImage) return fail("File harus berupa gambar (JPG, PNG, atau WebP).");
+  const event = await getEventById(eventId);
+  if (!event) return fail("Kegiatan tidak ditemukan.");
 
   if (isSupabaseConfigured()) {
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -481,8 +484,9 @@ export async function uploadPhotoAction(_prev: unknown, formData: FormData): Pro
     getDb().prepare("INSERT INTO photos (event_id,file_path,caption) VALUES (?,?,?)").run(eventId, `/api/uploads/${name}`, caption);
     revalidateAll();
     return ok(`Foto diupload & dikompres otomatis (${Math.round(compressed.length / 1024)} KB).`);
-  } catch {
-    return fail("Gagal memproses foto. Pastikan file gambar valid.");
+  } catch (e) {
+    console.error("uploadPhoto(sqlite)", e);
+    return fail("Gagal memproses foto. Gunakan JPG/PNG/WebP yang valid, maks. 15 MB.");
   }
 }
 

@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   // tanpa perlu remotePatterns.
   images: { unoptimized: true },
   eslint: { ignoreDuringBuilds: true },
+  // Server Actions membatasi body default 1 MB — terlalu kecil untuk foto HP.
+  // Foto maks 15 MB (divalidasi di action), jadi beri ruang lebih untuk multipart.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
+  },
 };
 
 // Setup binding Cloudflare hanya saat `next dev` (miniflare). Tidak dijalankan
