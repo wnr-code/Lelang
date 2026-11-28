@@ -43,17 +43,40 @@ export async function GET() {
     };
   }
 
-  const ready = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY && database.ok;
+  // Diagnosis penyimpanan foto: R2 (produksi) atau filesystem (preview).
+  // Membaca key yang tidak ada = cara aman memastikan binding R2 terpasang.
+  let photos: { ok: boolean; mode: string; lokasi: string; error?: string };
+  if (runtime === "cloudflare-worker") {
+    try {
+      const { getPhoto } = await import("@/lib/storage");
+      await getPhoto("__healthcheck__");
+      photos = { ok: true, mode: "r2", lokasi: "bucket liqo · binding Lelang" };
+    } catch (e) {
+      photos = {
+        ok: false,
+        mode: "r2",
+        lokasi: "bucket liqo · binding Lelang",
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  } else {
+    photos = { ok: true, mode: "filesystem", lokasi: "data/uploads" };
+  }
+
+  const ready = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY && database.ok && photos.ok;
   return NextResponse.json(
     {
       app: "lelang-kebaikan-cigatas",
       runtime,
       env,
       database,
+      photos,
       ready,
       petunjuk: ready
         ? "Konfigurasi lengkap. Aplikasi siap dipakai."
-        : "Lengkapi variabel runtime di Cloudflare: Worker lelang → Settings → Variables and Secrets. SUPABASE_SERVICE_ROLE_KEY / SESSION_SECRET / PANITIA_PASSWORD bertipe Secret.",
+        : !photos.ok
+          ? "Penyimpanan foto belum siap. Pasang R2 bucket `liqo` dengan binding `Lelang` di Worker lelang → Settings → Bindings."
+          : "Lengkapi variabel runtime di Cloudflare: Worker lelang → Settings → Variables and Secrets. SUPABASE_SERVICE_ROLE_KEY / SESSION_SECRET / PANITIA_PASSWORD bertipe Secret.",
     },
     { status: ready ? 200 : 503 }
   );
