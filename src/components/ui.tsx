@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, Archive, ShieldCheck, Info } from "lucide-react";
+import { NotifBell } from "@/components/notif-bell";
 import type { ItemStatus, SubmissionStatus } from "@/lib/types";
 import { ITEM_STATUS_LABEL } from "@/lib/types";
 
@@ -19,25 +20,28 @@ export function Logo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function PublicHeader() {
+export function PublicHeader({ notif = 0 }: { notif?: number }) {
   return (
     <header className="sticky top-0 z-40 border-b border-stone-900/5 bg-cream/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
-        <Logo />
-        <nav className="flex items-center gap-1">
-          <Link href="/tentang" className="btn-ghost">
-            <Info className="h-4 w-4" />
-            <span className="hidden sm:inline">Tentang</span>
-          </Link>
-          <Link href="/arsip" className="btn-ghost">
-            <Archive className="h-4 w-4" />
-            <span className="hidden sm:inline">Arsip</span>
-          </Link>
-          <Link href="/panitia" className="btn-ghost text-stone-500">
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image src="/images/logo-cigatas.webp" alt="Cigatas" width={1420} height={945} className="h-11 w-auto" />
+          <span className="leading-tight">
+            <span className="block text-base font-extrabold tracking-tight text-emerald-900">CIGATAS</span>
+            <span className="block text-[10px] font-semibold text-stone-500">Koordinator Majelis Qurrotul Ain</span>
+            <span className="block text-[10px] italic text-emerald-700">Bersama dalam Kebaikan</span>
+          </span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <NotifBell count={notif} href="/tentang" />
+          <nav className="hidden items-center gap-1 sm:flex">
+            <Link href="/tentang" className="btn-ghost"><Info className="h-4 w-4" /><span>Tentang</span></Link>
+            <Link href="/arsip" className="btn-ghost"><Archive className="h-4 w-4" /><span>Arsip</span></Link>
+          </nav>
+          <Link href="/panitia" className="btn-ghost text-stone-500" title="Panitia">
             <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Panitia</span>
           </Link>
-        </nav>
+        </div>
       </div>
     </header>
   );
@@ -61,6 +65,8 @@ export function PublicFooter() {
           Lelang Kebaikan Cigatas · Papan gotong royong digital komunitas
         </p>
         <p className="mt-1 text-xs text-stone-400">Tidak ada nominal uang. Semua bantuan berbentuk barang & kesediaan.</p>
+        <p className="mt-3 text-sm font-bold text-emerald-800">اللهُ يَجْزِيكُمْ خَيْرًا</p>
+        <p className="text-[11px] italic text-stone-400">“Semoga Allah membalas kebaikan Anda”</p>
       </div>
     </footer>
   );

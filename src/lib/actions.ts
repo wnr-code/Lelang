@@ -24,9 +24,10 @@ import {
   sbAddSurplus,
   sbUpdateSurplus,
   sbDeleteSurplus,
-  sbUploadPhoto,
+  sbInsertPhoto,
   sbDeletePhoto,
 } from "./supabase-actions";
+import { isWorkerd } from "./storage";
 
 export type ActionResult = { ok: true; message?: string; code?: string; id?: number } | { ok: false; error: string };
 
@@ -465,31 +466,39 @@ export async function uploadPhotoAction(_prev: unknown, formData: FormData): Pro
   const event = await getEventById(eventId);
   if (!event) return fail("Kegiatan tidak ditemukan.");
 
-  if (isSupabaseConfigured()) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const r = await sbUploadPhoto(eventId, caption, bytes);
-    revalidateAll();
-    return r;
-  }
-
-  // Jalur SQLite (preview lokal): photon + filesystem, di-import lazy.
   try {
     const { compressToWebp } = await import("./photo");
-    const fs = await import("node:fs");
-    const path = await import("node:path");
-    const { getDb } = await loadSqliteDb();
     const input = new Uint8Array(await file.arrayBuffer());
     const compressed = await compressToWebp(input);
-    const uploadDir = path.join(process.cwd(), "data", "uploads");
-    fs.mkdirSync(uploadDir, { recursive: true });
-    const name = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.webp`;
-    fs.writeFileSync(path.join(uploadDir, name), compressed);
-    getDb().prepare("INSERT INTO photos (event_id,file_path,caption) VALUES (?,?,?)").run(eventId, `/api/uploads/${name}`, caption);
+    let filePath: string;
+    if (isWorkerd()) {
+      // Produksi: simpan durabel di Cloudflare R2 (bucket liqo).
+      const { putPhoto } = await import("./storage");
+      const key = `${eventId}/${Date.now()}-${crypto.randomBytes(6).toString("hex")}.webp`;
+      await putPhoto(key, compressed);
+      filePath = `/api/foto/${key}`;
+    } else {
+      // Preview lokal: filesystem.
+      const fs = await import("node:fs");
+      const path = await import("node:path");
+      const uploadDir = path.join(process.cwd(), "data", "uploads");
+      fs.mkdirSync(uploadDir, { recursive: true });
+      const name = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.webp`;
+      fs.writeFileSync(path.join(uploadDir, name), compressed);
+      filePath = `/api/uploads/${name}`;
+    }
+    if (isSupabaseConfigured()) {
+      const r = await sbInsertPhoto(eventId, caption, filePath);
+      revalidateAll();
+      return r;
+    }
+    const { getDb } = await loadSqliteDb();
+    getDb().prepare("INSERT INTO photos (event_id,file_path,caption) VALUES (?,?,?)").run(eventId, filePath, caption);
     revalidateAll();
     return ok(`Foto diupload & dikompres otomatis (${Math.round(compressed.length / 1024)} KB).`);
   } catch (e) {
-    console.error("uploadPhoto(sqlite)", e);
-    return fail("Gagal memproses foto. Gunakan JPG/PNG/WebP yang valid, maks. 15 MB.");
+    console.error("uploadPhoto", e);
+    return fail("Gagal memproses foto. Gunakan JPG/PNG/WebP yang valid, maks. 2 MB.");
   }
 }
 

@@ -1,37 +1,32 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { HandHeart, LayoutDashboard, CalendarPlus, Inbox, PackageCheck, Recycle, LogOut, Globe } from "lucide-react";
+import Image from "next/image";
+import { LogOut, Globe } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions";
+import { getDashboardCounts } from "@/lib/queries";
+import { NotifBell } from "@/components/notif-bell";
+import { AdminNav } from "@/components/admin-nav";
 
 export const dynamic = "force-dynamic";
 
-const NAV = [
-  { href: "/panitia", label: "Ringkasan", icon: LayoutDashboard },
-  { href: "/panitia/kegiatan", label: "Kelola Kegiatan", icon: CalendarPlus },
-  { href: "/panitia/pengajuan", label: "Pengajuan", icon: Inbox },
-  { href: "/panitia/barang", label: "Barang & PJ", icon: PackageCheck },
-  { href: "/panitia/laporan", label: "Laporan & Sisa", icon: Recycle },
-];
-
 export default async function PanitiaLayout({ children }: { children: React.ReactNode }) {
   const authed = await isPanitia();
-  // Halaman login menangani dirinya sendiri; layout hanya membungkus.
-  if (!authed) {
-    return <>{children}</>;
-  }
+  if (!authed) return <>{children}</>;
+  const counts = await getDashboardCounts();
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 border-b border-stone-900/5 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/panitia" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
-              <HandHeart className="h-4 w-4" />
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+          <Link href="/panitia" className="flex items-center gap-2.5">
+            <Image src="/images/logo-cigatas.webp" alt="Cigatas" width={1420} height={945} className="h-10 w-auto" />
+            <span className="leading-tight">
+              <span className="block text-sm font-extrabold tracking-tight text-ink">CIGATAS</span>
+              <span className="block text-[10px] font-semibold text-emerald-700">Dashboard Panitia</span>
             </span>
-            <span className="text-sm font-extrabold tracking-tight text-ink">Pusat Kendali Panitia</span>
           </Link>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <NotifBell count={counts.pending} href="/panitia/notifikasi" />
             <Link href="/" className="btn-ghost text-xs" title="Lihat situs publik">
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Situs Publik</span>
@@ -44,25 +39,12 @@ export default async function PanitiaLayout({ children }: { children: React.Reac
             </form>
           </div>
         </div>
-        <nav className="mx-auto max-w-5xl overflow-x-auto px-4 pb-2">
-          <div className="flex gap-1">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-stone-500 transition hover:bg-emerald-50 hover:text-emerald-700"
-              >
-                <n.icon className="h-3.5 w-3.5" />
-                {n.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:pb-6">{children}</main>
       <footer className="border-t border-stone-900/5 py-4 text-center text-[11px] text-stone-400">
         Lelang Kebaikan Cigatas · Satu Kepedulian, Banyak Kebaikan
       </footer>
+      <AdminNav />
     </div>
   );
 }

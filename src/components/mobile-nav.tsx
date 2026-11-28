@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, CalendarDays, SearchCheck, Info } from "lucide-react";
+import { Home, CalendarDays, Archive, Info } from "lucide-react";
 
 const ITEMS = [
   { href: "/", label: "Beranda", icon: Home },
   { href: "/#kegiatan", label: "Kegiatan", icon: CalendarDays },
-  { href: "/lacak", label: "Lacak", icon: SearchCheck },
+  { href: "/arsip", label: "Riwayat", icon: Archive },
   { href: "/tentang", label: "Informasi", icon: Info },
 ];
 

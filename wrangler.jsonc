@@ -17,9 +17,13 @@
       "service": "lelang"
     }
   ],
-  // Aplikasi sepenuhnya force-dynamic + cache dummy (lihat open-next.config.ts),
-  // jadi TIDAK butuh bucket R2. Binding IMAGES juga sengaja tidak dipakai:
-  // foto sudah dikompres ke WebP saat upload dan next/image memakai unoptimized.
+  // Foto dokumentasi disimpan durabel di R2 (bucket `liqo`, binding `Lelang`).
+  // Disajikan lewat route /api/foto/[...key] (tidak perlu domain publik bucket).
+  "r2_buckets": [
+    { "binding": "Lelang", "bucket_name": "liqo" }
+  ],
+  // Aplikasi sepenuhnya force-dynamic + cache dummy (lihat open-next.config.ts).
+  // Binding IMAGES tidak dipakai: foto dikompres ke WebP & next/image unoptimized.
   "observability": {
     "enabled": true
   },
