@@ -60,17 +60,29 @@ export default async function HomePage() {
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 via-emerald-50/85 to-transparent sm:via-emerald-50/55" />
-          <div className="relative min-h-[300px] px-4 pt-7 pb-4">
-            <div className="max-w-[64%] sm:max-w-[52%]">
-              <h1 className="text-[32px] font-extrabold italic leading-[1.08] tracking-tight text-emerald-900 sm:text-[40px]">
-                Dari Kita<br />Untuk Kita
-              </h1>
-              <p className="mt-3 text-[14px] font-medium leading-relaxed text-ink/80 sm:text-sm">
-                Berbagi, Menguatkan,<br />Meraih Ridha Allah
+          <div className="relative min-h-[344px] px-4 pt-7 pb-20">
+            <div className="max-w-[72%] sm:max-w-[56%]">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-emerald-700">CIGATAS · Korwil Cigatas</p>
+              <div className="mt-1.5 flex items-start gap-2">
+                <Image
+                  src="/images/gavel.webp"
+                  alt=""
+                  width={112}
+                  height={112}
+                  className="mt-1 h-10 w-10 shrink-0 object-contain drop-shadow sm:h-14 sm:w-14"
+                  aria-hidden
+                />
+                <h1 className="text-[38px] font-extrabold leading-[0.98] tracking-tight text-emerald-900 sm:text-[54px]">
+                  Lelang<br /><span className="text-emerald-700">Kebaikan</span>
+                </h1>
+              </div>
+              <p className="mt-2 text-[15px] font-bold italic text-emerald-800 sm:text-lg">Bersama dalam Kebaikan</p>
+              <p className="mt-1 text-[12px] font-medium leading-relaxed text-ink/70 sm:text-[13px]">
+                Dari Kita Untuk Kita — Berbagi, Menguatkan, Meraih Ridha Allah
               </p>
               <Link
                 href="/tentang"
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-800 to-emerald-600 px-4 py-2 text-[12px] font-extrabold text-white shadow-md shadow-emerald-800/25 transition active:scale-[0.98]"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-800 to-emerald-600 px-4 py-2 text-[12px] font-extrabold text-white shadow-md shadow-emerald-800/25 transition active:scale-[0.98]"
               >
                 Korwil Cigatas <ChevronRight className="h-3.5 w-3.5" />
               </Link>
