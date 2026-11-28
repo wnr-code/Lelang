@@ -2,6 +2,7 @@ import "server-only";
 import { getEventById, getItemsWithStatus } from "./queries";
 import { ITEM_STATUS_LABEL } from "./types";
 import type { EventRow, ItemWithStatus } from "./types";
+import { REPORT_LOGO_PNG_BASE64, REPORT_LOGO_WIDTH, REPORT_LOGO_HEIGHT } from "./report-logo";
 
 export type ExportScope = "all" | "collected" | "pending";
 export type ExportFormat = "pdf" | "xlsx";
@@ -120,25 +121,40 @@ export async function generateExcel(data: ExportData): Promise<Buffer> {
   const emerald = "FF059669";
   const cream = "FFFAF6EE";
 
-  // Judul
-  ws.mergeCells("A1:K1");
-  const title = ws.getCell("A1");
+  // Kop surat: logo CIGATAS di kiri (baris 1-4, kolom A-B), identitas di kanan.
+  ws.getRow(1).height = 30;
+  ws.getRow(2).height = 22;
+  ws.getRow(3).height = 24;
+  ws.getRow(4).height = 24;
+  ws.getRow(5).height = 16;
+  const logoId = wb.addImage({ base64: REPORT_LOGO_PNG_BASE64, extension: "png" });
+  ws.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 100 } });
+
+  ws.mergeCells("C1:K1");
+  const title = ws.getCell("C1");
   title.value = "LELANG KEBAIKAN CIGATAS";
   title.font = { bold: true, size: 16, color: { argb: emerald } };
   title.alignment = { vertical: "middle", horizontal: "left" };
-  ws.getRow(1).height = 26;
 
-  ws.mergeCells("A2:K2");
-  ws.getCell("A2").value = `${data.event.title} — ${data.scopeLabel}`;
-  ws.getCell("A2").font = { bold: true, size: 12 };
+  ws.mergeCells("C2:K2");
+  ws.getCell("C2").value = "Korwil Cigatas · Bersama dalam Kebaikan";
+  ws.getCell("C2").font = { italic: true, size: 10, color: { argb: "FF047857" } };
+  ws.getCell("C2").alignment = { vertical: "middle", horizontal: "left" };
 
-  ws.mergeCells("A3:K3");
-  ws.getCell("A3").value = `Tanggal kegiatan: ${fmtDate(data.event.event_date)}${data.event.location ? " · " + data.event.location : ""}`;
-  ws.getCell("A3").font = { size: 10, color: { argb: "FF78716C" } };
+  ws.mergeCells("C3:K3");
+  ws.getCell("C3").value = `${data.event.title} — ${data.scopeLabel}`;
+  ws.getCell("C3").font = { bold: true, size: 12 };
+  ws.getCell("C3").alignment = { vertical: "middle", horizontal: "left" };
 
-  ws.mergeCells("A4:K4");
-  ws.getCell("A4").value = `Ringkasan: ${data.summary.fulfilled} terpenuhi · ${data.summary.process} dalam proses · ${data.summary.open} dibuka (dari ${data.summary.total} item)`;
-  ws.getCell("A4").font = { size: 10, color: { argb: "FF78716C" } };
+  ws.mergeCells("C4:K4");
+  ws.getCell("C4").value = `Tanggal kegiatan: ${fmtDate(data.event.event_date)}${data.event.location ? " · " + data.event.location : ""}`;
+  ws.getCell("C4").font = { size: 10, color: { argb: "FF78716C" } };
+  ws.getCell("C4").alignment = { vertical: "middle", horizontal: "left" };
+
+  ws.mergeCells("A5:K5");
+  ws.getCell("A5").value = `Ringkasan: ${data.summary.fulfilled} terpenuhi · ${data.summary.process} dalam proses · ${data.summary.open} dibuka (dari ${data.summary.total} item)`;
+  ws.getCell("A5").font = { size: 10, color: { argb: "FF78716C" } };
+  ws.getCell("A5").alignment = { vertical: "middle", horizontal: "left" };
 
   // Header tabel (baris 6)
   const header = ws.getRow(6);
@@ -195,6 +211,7 @@ export async function generatePdf(data: ExportData): Promise<Buffer> {
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const oblique = await doc.embedFont(StandardFonts.HelveticaOblique);
+  const logoPng = await doc.embedPng(Buffer.from(REPORT_LOGO_PNG_BASE64, "base64"));
 
   const emerald = rgb(0.02, 0.59, 0.41);
   const ink = rgb(0.12, 0.16, 0.22);
@@ -253,15 +270,24 @@ export async function generatePdf(data: ExportData): Promise<Buffer> {
   const hline = (yTop: number) => {
     page.drawLine({ start: { x: M, y: H - yTop }, end: { x: M + pageW, y: H - yTop }, thickness: 0.5, color: line });
   };
+  const drawLogo = (x: number, yTop: number, w: number) => {
+    const h = (w * REPORT_LOGO_HEIGHT) / REPORT_LOGO_WIDTH;
+    page.drawImage(logoPng, { x, y: H - yTop - h, width: w, height: h });
+  };
 
-  // Header halaman pertama
-  drawText("LELANG KEBAIKAN CIGATAS", M, 38, { f: bold, size: 18, color: emerald });
-  drawText(`${data.event.title} — ${data.scopeLabel}`, M, 64, { f: bold, size: 13, color: ink, maxW: pageW });
-  drawText(`Tanggal kegiatan: ${fmtDate(data.event.event_date)}${data.event.location ? "  ·  " + data.event.location : ""}`, M, 84, { size: 9, color: muted, maxW: pageW });
-  drawText(`Ringkasan: ${data.summary.fulfilled} terpenuhi · ${data.summary.process} dalam proses · ${data.summary.open} dibuka (dari ${data.summary.total} item)`, M, 97, { size: 9, color: muted, maxW: pageW });
+  // Header halaman pertama: logo CIGATAS + identitas
+  const logoW = 100;
+  drawLogo(M, 30, logoW);
+  const tx = M + logoW + 16;
+  const tw = pageW - logoW - 16;
+  drawText("LELANG KEBAIKAN CIGATAS", tx, 36, { f: bold, size: 17, color: emerald, maxW: tw });
+  drawText("Korwil Cigatas · Bersama dalam Kebaikan", tx, 58, { f: oblique, size: 9, color: muted, maxW: tw });
+  drawText(`${data.event.title} — ${data.scopeLabel}`, tx, 74, { f: bold, size: 12, color: ink, maxW: tw });
+  drawText(`Tanggal kegiatan: ${fmtDate(data.event.event_date)}${data.event.location ? "  ·  " + data.event.location : ""}`, M, 104, { size: 9, color: muted, maxW: pageW });
+  drawText(`Ringkasan: ${data.summary.fulfilled} terpenuhi · ${data.summary.process} dalam proses · ${data.summary.open} dibuka (dari ${data.summary.total} item)`, M, 117, { size: 9, color: muted, maxW: pageW });
 
   const rowH = 22;
-  let y = 120;
+  let y = 138;
 
   const drawTableHeader = () => {
     rect(M, y, pageW, rowH, emerald);
@@ -282,7 +308,10 @@ export async function generatePdf(data: ExportData): Promise<Buffer> {
   data.rows.forEach((r, idx) => {
     if (y + rowH > H - 60) {
       page = doc.addPage([W, H]);
-      y = 40;
+      drawLogo(M, 22, 40);
+      drawText("LELANG KEBAIKAN CIGATAS", M + 52, 26, { f: bold, size: 11, color: emerald });
+      drawText(`${data.event.title} — ${data.scopeLabel}`, M + 52, 42, { size: 9, color: muted, maxW: pageW - 52 });
+      y = 64;
       drawTableHeader();
     }
     if (idx % 2 === 1) rect(M, y, pageW, rowH, cream);
