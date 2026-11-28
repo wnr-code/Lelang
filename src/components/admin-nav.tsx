@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Home, CalendarDays, ClipboardList, Package, Gift, BarChart3, Settings, LogOut, Lightbulb,
+  LayoutGrid,
 } from "lucide-react";
+import { BottomSheet } from "@/components/bottom-sheet";
 
 const ITEMS = [
   { href: "/panitia", label: "Dashboard", icon: Home },
@@ -87,36 +90,101 @@ export function AdminSidebar({
   );
 }
 
-/** Navigasi bawah panitia (layar kecil / Android). */
-export function AdminNav({ pendingCount = 0, proposalCount = 0 }: { pendingCount?: number; proposalCount?: number }) {
+const MAIN_NAV = [
+  { href: "/panitia", label: "Dashboard", icon: Home },
+  { href: "/panitia/pengajuan", label: "Pengajuan", icon: ClipboardList, badge: true },
+  { href: "/panitia/barang", label: "Barang", icon: Gift },
+  { href: "/panitia/laporan", label: "Laporan", icon: BarChart3 },
+];
+const MORE_NAV = [
+  { href: "/panitia/kegiatan", label: "Kelola Kegiatan", desc: "Buat & atur kegiatan", icon: CalendarDays },
+  { href: "/panitia/kebutuhan", label: "Kelola Kebutuhan", desc: "Daftar barang & tenaga", icon: Package },
+  { href: "/panitia/usulan", label: "Kelola Usulan", desc: "Setujui usulan item baru", icon: Lightbulb, badgeProposal: true },
+  { href: "/panitia/pengaturan", label: "Pengaturan", desc: "Sistem, kontak & ekspor", icon: Settings },
+];
+
+/** Navigasi bawah panitia (Android) — maksimal 5 menu; sisanya di sheet "Lainnya". */
+export function AdminNav({
+  pendingCount = 0,
+  proposalCount = 0,
+  logoutAction,
+}: {
+  pendingCount?: number;
+  proposalCount?: number;
+  logoutAction?: () => Promise<void>;
+}) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
   if (!pathname.startsWith("/panitia") || pathname.startsWith("/panitia/login")) return null;
-  const items = ITEMS.filter((i) => i.href !== "/panitia/kebutuhan" && i.href !== "/panitia/pengaturan" && i.href !== "/panitia/laporan");
+  const moreActive = MORE_NAV.some((m) => pathname.startsWith(m.href));
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-emerald-900/10 bg-white/95 backdrop-blur lg:hidden">
-      <div className="mx-auto flex max-w-3xl items-stretch justify-around px-1">
-        {items.map(({ href, label, icon: Icon, badge, badgeProposal }) => {
-          const active = isActive(pathname, href);
-          const short = label.replace("Kelola ", "");
-          const count = badgeProposal ? proposalCount : pendingCount;
-          return (
+    <>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-emerald-900/10 bg-white/95 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-3xl items-stretch justify-around px-1">
+          {MAIN_NAV.map(({ href, label, icon: Icon, badge }) => {
+            const active = isActive(pathname, href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition ${active ? "text-emerald-700" : "text-stone-400"}`}
+              >
+                <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.9} />
+                {label}
+                <span className={`h-[3px] w-6 rounded-full ${active ? "bg-emerald-600" : "bg-transparent"}`} />
+                {badge && pendingCount > 0 && (
+                  <span className="absolute right-[22%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-extrabold text-white ring-2 ring-white">
+                    {pendingCount > 9 ? "9+" : pendingCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={`relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition ${moreActive ? "text-emerald-700" : "text-stone-400"}`}
+          >
+            <LayoutGrid className="h-[21px] w-[21px]" strokeWidth={moreActive ? 2.3 : 1.9} />
+            Lainnya
+            <span className={`h-[3px] w-6 rounded-full ${moreActive ? "bg-emerald-600" : "bg-transparent"}`} />
+            {proposalCount > 0 && (
+              <span className="absolute right-[22%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-extrabold text-white ring-2 ring-white">
+                {proposalCount > 9 ? "9+" : proposalCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </nav>
+
+      <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Menu Lainnya">
+        <div className="grid grid-cols-2 gap-2.5">
+          {MORE_NAV.map(({ href, label, desc, icon: Icon, badgeProposal }) => (
             <Link
               key={href}
               href={href}
-              className={`relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition ${active ? "text-emerald-700" : "text-stone-400"}`}
+              onClick={() => setMoreOpen(false)}
+              className="relative flex flex-col gap-1.5 rounded-2xl bg-emerald-50/70 px-3.5 py-3.5 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
             >
-              <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.3 : 1.9} />
-              {short}
-              <span className={`h-[3px] w-6 rounded-full ${active ? "bg-emerald-600" : "bg-transparent"}`} />
-              {(badge || badgeProposal) && count > 0 && (
-                <span className="absolute right-[22%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-extrabold text-white ring-2 ring-white">
-                  {count > 9 ? "9+" : count}
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white"><Icon className="h-5 w-5" /></span>
+              <span className="text-[13px] font-extrabold text-ink">{label}</span>
+              <span className="text-[11px] leading-snug text-stone-500">{desc}</span>
+              {badgeProposal && proposalCount > 0 && (
+                <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white">
+                  {proposalCount > 9 ? "9+" : proposalCount}
                 </span>
               )}
             </Link>
-          );
-        })}
-      </div>
-    </nav>
+          ))}
+        </div>
+        {logoutAction && (
+          <form action={logoutAction} className="mt-3">
+            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-[14px] font-extrabold text-rose-600 ring-1 ring-rose-100">
+              <LogOut className="h-4 w-4" /> Logout
+            </button>
+          </form>
+        )}
+      </BottomSheet>
+    </>
   );
 }

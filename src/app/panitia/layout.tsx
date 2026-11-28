@@ -50,10 +50,14 @@ export default async function PanitiaLayout({ children }: { children: React.Reac
         <main className="min-w-0 flex-1 pb-24 lg:pb-8">{children}</main>
       </div>
 
-      <footer className="border-t border-emerald-900/5 py-4 text-center text-[12px] text-stone-400">
-        Lelang Kebaikan Cigatas · Korwil Cigatas · Bersama dalam Kebaikan
+      <footer className="relative overflow-hidden bg-gradient-to-r from-emerald-800 to-emerald-700 px-4 pb-24 pt-6 text-center text-white lg:pb-6">
+        <span className="pointer-events-none absolute -left-6 -top-6 h-24 w-24 rounded-full bg-emerald-600/30" />
+        <span className="pointer-events-none absolute -bottom-8 -right-6 h-28 w-28 rounded-full bg-gold/15" />
+        <p className="relative text-[22px] leading-relaxed" dir="rtl" lang="ar">اللهُ يَجْزِيكُمْ خَيْرًا</p>
+        <p className="relative mt-1 text-[12px] italic text-emerald-100">“Semoga Allah membalas kebaikan Anda”</p>
+        <p className="relative mt-2 text-[11px] text-emerald-200/80">Lelang Kebaikan Cigatas · Korwil Cigatas · Bersama dalam Kebaikan</p>
       </footer>
-      <AdminNav pendingCount={counts.pending} proposalCount={counts.proposalsPending} />
+      <AdminNav pendingCount={counts.pending} proposalCount={counts.proposalsPending} logoutAction={logoutAction} />
     </div>
   );
 }
