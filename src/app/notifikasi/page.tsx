@@ -46,6 +46,7 @@ export default async function NotifikasiPage() {
             eventTitle={next?.ev.title}
             eventSlug={next?.ev.slug}
             startsAt={next?.starts?.toISOString() ?? null}
+            hideControls
           />
         </div>
 

@@ -60,7 +60,7 @@ async function LaporanView({ eventId, eventSlug, eventTitle }: { eventId: number
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs font-extrabold uppercase tracking-widest text-stone-400">Rekap Pemenuhan — {eventTitle}</h2>
-          <a href={`/arsip/${eventSlug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline">
+          <a href={`/rekap/${eventSlug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline">
             <ExternalLink className="h-3.5 w-3.5" /> Pratinjau publik
           </a>
         </div>
