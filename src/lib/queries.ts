@@ -174,6 +174,8 @@ export async function getDashboardCounts(): Promise<{
   active: number;
   archived: number;
   unresolvedSurplus: number;
+  members: number;
+  items: number;
 }> {
   if (isSupabaseConfigured()) return sbGetDashboardCounts();
   const { getDb } = await loadSqliteDb();
@@ -182,5 +184,7 @@ export async function getDashboardCounts(): Promise<{
   const active = (db.prepare("SELECT COUNT(*) AS c FROM events WHERE status = 'active'").get() as { c: number }).c;
   const archived = (db.prepare("SELECT COUNT(*) AS c FROM events WHERE status IN ('completed','archived')").get() as { c: number }).c;
   const unresolvedSurplus = (db.prepare("SELECT COUNT(*) AS c FROM surplus WHERE outcome = ''").get() as { c: number }).c;
-  return { pending, active, archived, unresolvedSurplus };
+  const members = (db.prepare("SELECT COUNT(DISTINCT nickname) AS c FROM submissions").get() as { c: number }).c;
+  const items = (db.prepare("SELECT COUNT(*) AS c FROM items").get() as { c: number }).c;
+  return { pending, active, archived, unresolvedSurplus, members, items };
 }

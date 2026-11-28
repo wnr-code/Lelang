@@ -174,13 +174,44 @@ export function EventCard({ event, items }: { event: EventRow; items: ItemWithSt
 
       {expanded && (
         <div className="border-t border-stone-100 px-5 py-4">
-          <p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-stone-400">Daftar Kebutuhan ({items.length})</p>
-          <div className="space-y-2">
-            {items.map((item) => <ItemRow key={item.id} item={item} />)}
+          <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone-400">Ringkasan Kebutuhan</p>
+          <div className="flex flex-wrap gap-1.5">
+            {items.slice(0, 8).map((item) => (
+              <span key={item.id} className="chip bg-stone-50 text-stone-600 ring-1 ring-stone-100">
+                {item.name} · {item.target_label}
+              </span>
+            ))}
+            {items.length > 8 && <span className="chip bg-stone-50 text-stone-400">+{items.length - 8} lainnya</span>}
+            {items.length === 0 && <span className="text-xs text-stone-400">Belum ada kebutuhan.</span>}
           </div>
-          <AddItemForm eventId={event.id} />
+          <a href={`/panitia/kebutuhan?event=${event.id}`} className="btn-secondary mt-3 w-full py-2 text-xs">
+            Kelola Kebutuhan Kegiatan Ini
+          </a>
+          <p className="mt-2 text-[11px] text-stone-400">
+            Tambah/ubah kebutuhan ada di menu <b>Kelola Kebutuhan</b> agar tiap menu tetap terpisah dan mudah dipakai.
+          </p>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Panel daftar kebutuhan satu kegiatan — dipakai halaman Kelola Kebutuhan. */
+export function EventItemsPanel({ eventId, items }: { eventId: number; items: ItemWithStatus[] }) {
+  return (
+    <div className="card px-5 py-4">
+      <p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-stone-400">
+        Daftar Kebutuhan ({items.length})
+      </p>
+      <div className="space-y-2">
+        {items.map((item) => <ItemRow key={item.id} item={item} />)}
+        {items.length === 0 && (
+          <p className="rounded-xl bg-stone-50 px-4 py-3 text-xs text-stone-400">
+            Belum ada kebutuhan. Tambahkan barang/sembako atau kebutuhan tenaga di bawah.
+          </p>
+        )}
+      </div>
+      <AddItemForm eventId={eventId} />
     </div>
   );
 }

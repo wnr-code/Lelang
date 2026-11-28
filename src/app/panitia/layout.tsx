@@ -1,11 +1,11 @@
 import Link from "next/link";
-import Image from "next/image";
-import { LogOut, Globe } from "lucide-react";
+import { ChevronDown, Globe } from "lucide-react";
 import { isPanitia } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions";
 import { getDashboardCounts } from "@/lib/queries";
+import { BrandMark, Avatar } from "@/components/ui";
 import { NotifBell } from "@/components/notif-bell";
-import { AdminNav } from "@/components/admin-nav";
+import { AdminNav, AdminSidebar } from "@/components/admin-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -15,36 +15,45 @@ export default async function PanitiaLayout({ children }: { children: React.Reac
   const counts = await getDashboardCounts();
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-40 border-b border-stone-900/5 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <Link href="/panitia" className="flex items-center gap-2.5">
-            <Image src="/images/logo-cigatas.webp" alt="Cigatas" width={1420} height={945} className="h-10 w-auto" />
-            <span className="leading-tight">
-              <span className="block text-sm font-extrabold tracking-tight text-ink">CIGATAS</span>
-              <span className="block text-[10px] font-semibold text-emerald-700">Dashboard Panitia</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <NotifBell count={counts.pending} href="/panitia/notifikasi" />
-            <Link href="/" className="btn-ghost text-xs" title="Lihat situs publik">
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Situs Publik</span>
-            </Link>
-            <form action={logoutAction}>
-              <button type="submit" className="btn-ghost text-xs text-rose-500" title="Keluar">
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Keluar</span>
-              </button>
-            </form>
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-40 border-b border-emerald-900/5 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-[74px] max-w-6xl items-center gap-2 px-4">
+          <div className="min-w-0 flex-1">
+            <BrandMark href="/panitia" />
           </div>
+          <NotifBell count={counts.pending} href="/panitia/notifikasi" label="Pengajuan menunggu" />
+          <Link
+            href="/"
+            title="Lihat situs anggota"
+            className="hidden h-10 w-10 items-center justify-center rounded-full text-emerald-800 transition hover:bg-emerald-50 sm:flex"
+          >
+            <Globe className="h-5 w-5" strokeWidth={1.9} />
+          </Link>
+          <Link
+            href="/panitia/pengaturan"
+            className="flex shrink-0 items-center gap-2 rounded-full bg-white py-1 pl-1 pr-2.5 ring-1 ring-emerald-900/10 transition hover:bg-emerald-50"
+          >
+            <span className="relative">
+              <Avatar name="Admin Panitia" className="h-9 w-9 text-[11px]" />
+              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            </span>
+            <span className="hidden text-[11px] font-extrabold leading-tight text-ink sm:block">
+              Admin<br />Panitia
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-stone-400" />
+          </Link>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:pb-6">{children}</main>
-      <footer className="border-t border-stone-900/5 py-4 text-center text-[11px] text-stone-400">
-        Lelang Kebaikan Cigatas · Satu Kepedulian, Banyak Kebaikan
+
+      <div className="mx-auto flex w-full max-w-6xl gap-5 px-4 py-5">
+        <AdminSidebar pendingCount={counts.pending} logoutAction={logoutAction} />
+        <main className="min-w-0 flex-1 pb-24 lg:pb-8">{children}</main>
+      </div>
+
+      <footer className="border-t border-emerald-900/5 py-4 text-center text-[11px] text-stone-400">
+        Lelang Kebaikan Cigatas · Korwil Cigatas · Bersama dalam Kebaikan
       </footer>
-      <AdminNav />
+      <AdminNav pendingCount={counts.pending} />
     </div>
   );
 }

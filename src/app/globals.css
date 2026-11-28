@@ -2,11 +2,28 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-cream: #faf6ee;
-  --color-cream-dark: #f3ecdd;
-  --color-emerald-brand: #059669;
-  --color-emerald-deep: #047857;
-  --color-ink: #1f2937;
+
+  /* Palet resmi Cigatas */
+  --color-brand-deep: #075b35;
+  --color-brand: #078a48;
+  --color-brand-soft: #e7f7e9;
+  --color-cream: #fff9ea;
+  --color-cream-dark: #f6efd9;
+  --color-gold: #e8b83f;
+  --color-ink: #27333d;
+
+  /* Skala emerald dipetakan ke palet Cigatas supaya seluruh halaman konsisten */
+  --color-emerald-50: #f2fbf5;
+  --color-emerald-100: #e7f7e9;
+  --color-emerald-200: #c6ebd3;
+  --color-emerald-300: #96d9af;
+  --color-emerald-400: #4fbe81;
+  --color-emerald-500: #12a05c;
+  --color-emerald-600: #078a48;
+  --color-emerald-700: #06713c;
+  --color-emerald-800: #075b35;
+  --color-emerald-900: #054a2b;
+  --color-emerald-950: #03301c;
 }
 
 html {
@@ -14,34 +31,67 @@ html {
 }
 
 body {
-  background-color: var(--color-cream);
+  background-color: #f7fcf8;
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: #a7f3d0;
-  color: #064e3b;
+  background: #c6ebd3;
+  color: #075b35;
+}
+
+/* Animasi ringan — otomatis mati bila pengguna memilih "kurangi animasi". */
+@keyframes cigatasFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cigatasFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @layer components {
   .card {
-    @apply rounded-3xl bg-white shadow-[0_8px_24px_rgba(31,41,55,0.06)] ring-1 ring-stone-900/5;
+    @apply rounded-[20px] bg-white shadow-[0_6px_20px_rgba(7,91,53,0.07)] ring-1 ring-emerald-900/5;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-emerald-700/20 transition hover:from-emerald-800 hover:to-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-800 to-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-emerald-800/20 transition hover:from-emerald-900 hover:to-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .hero-grad {
-    @apply bg-gradient-to-b from-emerald-50 via-emerald-100/60 to-cream;
+    @apply bg-gradient-to-b from-emerald-100 via-emerald-50 to-cream;
   }
   .banner-grad {
     @apply bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-600;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-600/30 transition hover:bg-emerald-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-600/25 transition hover:bg-emerald-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-stone-600 transition hover:bg-emerald-50 active:scale-[0.98];
   }
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100 active:scale-[0.98];
@@ -54,5 +104,17 @@ body {
   }
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold;
+  }
+  .animate-fade-up {
+    animation: cigatasFadeUp 0.45s ease-out both;
+  }
+  .animate-fade-in {
+    animation: cigatasFadeIn 0.5s ease-out both;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
